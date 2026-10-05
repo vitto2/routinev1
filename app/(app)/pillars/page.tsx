@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPillars } from "@/lib/data/pillars";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
-import { ICONS_BY_NAME } from "@/lib/constants/appearance";
+import { ICONS_BY_NAME, accentStyles } from "@/lib/constants/appearance";
 import { Button } from "@/components/ui/button";
 
 export default async function PillarsPage() {
@@ -33,25 +33,22 @@ export default async function PillarsPage() {
         <div className="space-y-2">
           {pillars.map((pillar) => {
             const Icon = pillar.icon ? ICONS_BY_NAME[pillar.icon] : undefined;
+            const accent = accentStyles(pillar.color);
             return (
               <Link
                 key={pillar.id}
                 href={`/pillars/${pillar.id}`}
-                className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5"
+                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/40"
               >
                 <span
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full"
-                  style={{ backgroundColor: `${pillar.color ?? "#6366f1"}22` }}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-2xl"
+                  style={accent.bubble}
+                  aria-hidden
                 >
-                  {Icon ? (
-                    <Icon
-                      className="size-4"
-                      style={{ color: pillar.color ?? undefined }}
-                    />
-                  ) : null}
+                  {Icon ? <Icon className="size-5" /> : null}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{pillar.name}</p>
+                  <p className="truncate font-semibold">{pillar.name}</p>
                   {pillar.description ? (
                     <p className="truncate text-xs text-muted-foreground">
                       {pillar.description}

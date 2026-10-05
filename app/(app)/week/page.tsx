@@ -39,7 +39,7 @@ export default async function WeekPage() {
         <p className="text-sm text-muted-foreground">
           {formatDisplayDate(start)} – {formatDisplayDate(end)}
         </p>
-        <h1 className="text-xl font-semibold tracking-tight">Sua semana</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Sua semana</h1>
       </header>
 
       <div className="rounded-2xl border border-border bg-card p-4">

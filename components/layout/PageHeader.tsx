@@ -13,13 +13,13 @@ export function PageHeader({
       {backHref ? (
         <Link
           href={backHref}
-          className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent"
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-input bg-card text-foreground transition-colors hover:bg-accent"
           aria-label="Voltar"
         >
           <ChevronLeft className="size-4" />
         </Link>
       ) : null}
-      <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+      <h1 className="text-xl font-bold tracking-tight">{title}</h1>
     </div>
   );
 }

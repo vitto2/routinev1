@@ -5,6 +5,7 @@ import { Check, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { toggleHabitCompletion, addHabitProgress } from "@/lib/actions/habitLogs";
+import { ICONS_BY_NAME, accentStyles, readableOn, DEFAULT_ACCENT } from "@/lib/constants/appearance";
 import type { HabitLog, HabitWithSchedules } from "@/types/domain";
 
 const QUICK_INCREMENTS: Record<string, number[]> = {
@@ -22,24 +23,47 @@ function reduceLog(state: LogState, action: LogAction): LogState {
   return { value, completed };
 }
 
+function CheckCircle({ done, color }: { done: boolean; color: string }) {
+  return (
+    <span
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
+        done ? "animate-check border-transparent" : "border-input bg-card",
+      )}
+      style={done ? { backgroundColor: color, color: readableOn(color) } : undefined}
+    >
+      {done ? <Check className="size-[18px]" strokeWidth={3} /> : null}
+    </span>
+  );
+}
+
 export function HabitListItem({
   habit,
   log,
   dateISO,
   index = 0,
   weekProgress,
+  color,
+  iconName,
 }: {
   habit: HabitWithSchedules;
   log: HabitLog | undefined;
   dateISO: string;
   index?: number;
   weekProgress?: { done: number; target: number };
+  /** cor do hábito, ou do pilar quando o hábito não tem a sua */
+  color?: string | null;
+  iconName?: string | null;
 }) {
   const [pending, startTransition] = useTransition();
   const [state, applyOptimistic] = useOptimistic<LogState, LogAction>(
     { completed: log?.completed ?? false, value: log?.value ?? 0 },
     reduceLog,
   );
+
+  const accentColor = color || DEFAULT_ACCENT;
+  const accent = accentStyles(accentColor);
+  const Icon = iconName ? ICONS_BY_NAME[iconName] : undefined;
 
   function handleToggle() {
     startTransition(async () => {
@@ -64,6 +88,15 @@ export function HabitListItem({
   }
 
   const delay = { animationDelay: `${Math.min(index, 8) * 40}ms` };
+  const bubble = Icon ? (
+    <span
+      className="flex size-9 shrink-0 items-center justify-center rounded-xl"
+      style={accent.bubble}
+      aria-hidden
+    >
+      <Icon className="size-[18px]" />
+    </span>
+  ) : null;
 
   if (habit.tracking_type === "quantity" || habit.tracking_type === "time") {
     return (
@@ -74,6 +107,8 @@ export function HabitListItem({
           completed={state.completed}
           pending={pending}
           onAdd={handleAdd}
+          color={accentColor}
+          bubble={bubble}
         />
       </div>
     );
@@ -93,26 +128,19 @@ export function HabitListItem({
       <button
         type="button"
         onClick={handleToggle}
+        aria-pressed={state.completed}
+        style={state.completed ? accent.soft : undefined}
         className={cn(
-          "flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
-          state.completed && "border-primary/30 bg-primary/5",
+          "flex min-h-16 w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left shadow-sm transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
+          state.completed ? "border-transparent" : "border-border hover:bg-accent/40",
         )}
       >
-        <span
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
-            state.completed
-              ? "animate-check border-primary bg-primary text-primary-foreground"
-              : "border-muted-foreground/30",
-          )}
-        >
-          {state.completed ? <Check className="size-4" /> : null}
-        </span>
-        <span className="flex-1">
+        <CheckCircle done={state.completed} color={accentColor} />
+        <span className="min-w-0 flex-1">
           <span
             className={cn(
-              "block font-medium transition-colors duration-200",
-              state.completed && "text-muted-foreground line-through",
+              "block truncate font-medium transition-colors duration-200",
+              state.completed && "text-muted-foreground line-through decoration-1",
             )}
           >
             {habit.name}
@@ -121,6 +149,7 @@ export function HabitListItem({
             <span className="block text-xs text-muted-foreground">{subtitle}</span>
           ) : null}
         </span>
+        {bubble}
       </button>
     </div>
   );
@@ -132,43 +161,51 @@ function ProgressHabitRow({
   completed,
   pending,
   onAdd,
+  color,
+  bubble,
 }: {
   habit: HabitWithSchedules;
   value: number;
   completed: boolean;
   pending: boolean;
   onAdd: (delta: number) => void;
+  color: string;
+  bubble: React.ReactNode;
 }) {
   const target = habit.target_value ?? 0;
   const unit = habit.target_unit ?? "";
   const increments = QUICK_INCREMENTS[unit] ?? [1, 5];
   const percent = target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0;
+  const accent = accentStyles(color);
 
   return (
     <div
+      style={completed ? accent.soft : undefined}
       className={cn(
-        "rounded-2xl border border-border bg-card px-4 py-3.5 transition-colors duration-200",
-        completed && "border-primary/30 bg-primary/5",
+        "rounded-2xl border bg-card px-4 py-3.5 shadow-sm transition-colors duration-200",
+        completed ? "border-transparent" : "border-border",
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="flex items-center gap-2 font-medium">
-          {habit.name}
-          {completed ? (
-            <span className="animate-check flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Check className="size-3" />
-            </span>
-          ) : null}
-        </span>
-        <span className="text-sm tabular-nums text-muted-foreground">
+      <div className="flex items-center gap-3">
+        <CheckCircle done={completed} color={color} />
+        <span className="min-w-0 flex-1 truncate font-medium">{habit.name}</span>
+        <span className="text-sm font-medium tabular-nums text-muted-foreground">
           {value}
           {target ? `/${target}` : ""} {unit}
         </span>
+        {bubble}
       </div>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted"
+        role="progressbar"
+        aria-label={`Progresso de ${habit.name}`}
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
-          className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
-          style={{ width: `${percent}%` }}
+          className="h-full rounded-full transition-[width] duration-300 ease-out"
+          style={{ width: `${percent}%`, backgroundColor: color }}
         />
       </div>
       <div className="mt-3 flex items-center gap-2">
@@ -178,9 +215,9 @@ function ProgressHabitRow({
             type="button"
             disabled={pending}
             onClick={() => onAdd(inc)}
-            className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-medium transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
+            className="flex min-h-10 items-center gap-1 rounded-full border border-input bg-card px-3.5 text-sm font-medium transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
           >
-            <Plus className="size-3" />
+            <Plus className="size-3.5" />
             {inc}
             {unit}
           </button>
@@ -190,10 +227,10 @@ function ProgressHabitRow({
             type="button"
             disabled={pending}
             onClick={() => onAdd(-(increments[0] ?? 1))}
-            className="ml-auto flex items-center gap-1 rounded-full border border-border px-2.5 py-1.5 text-xs text-muted-foreground transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
-            aria-label="Remover"
+            className="ml-auto flex size-10 items-center justify-center rounded-full border border-input bg-card text-muted-foreground transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
+            aria-label={`Remover ${increments[0]} ${unit}`}
           >
-            <Minus className="size-3" />
+            <Minus className="size-4" />
           </button>
         ) : null}
       </div>

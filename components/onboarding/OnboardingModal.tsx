@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Flame, ListChecks, Sparkles, TrendingUp } from "lucide-react";
 import { completeOnboarding, skipOnboarding } from "@/lib/actions/onboarding";
 import { LIFE_AREAS, type LifeArea } from "@/lib/constants/onboarding";
-import { ICONS_BY_NAME } from "@/lib/constants/appearance";
+import { ICONS_BY_NAME, accentStyles, readableOn } from "@/lib/constants/appearance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -252,7 +252,7 @@ function AreaCard({
   // Quando ativo, anel e fundo usam a cor da própria área.
   const style = {
     animationDelay: `${index * 50}ms`,
-    ...(active ? { backgroundColor: `${area.color}14`, "--tw-ring-color": area.color } : {}),
+    ...(active ? { backgroundColor: `${area.color}14`, "--tw-ring-color": `color-mix(in oklab, ${area.color} 50%, var(--foreground))` } : {}),
   } as React.CSSProperties;
 
   return (
@@ -268,7 +268,7 @@ function AreaCard({
     >
       <span
         className="flex size-9 items-center justify-center rounded-xl"
-        style={{ backgroundColor: `${area.color}22`, color: area.color }}
+        style={accentStyles(area.color).bubble}
       >
         <Icon className="size-4" />
       </span>
@@ -278,8 +278,8 @@ function AreaCard({
       </span>
       {active ? (
         <span
-          className="animate-check absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full text-white"
-          style={{ backgroundColor: area.color }}
+          className="animate-check absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full"
+          style={{ backgroundColor: area.color, color: readableOn(area.color) }}
         >
           <Check className="size-3" />
         </span>
@@ -312,7 +312,7 @@ function HabitsStep({
           const Icon = ICONS_BY_NAME[area.icon] ?? Sparkles;
           return (
             <section key={area.id} className="space-y-2">
-              <h3 className="flex items-center gap-2 text-sm font-semibold" style={{ color: area.color }}>
+              <h3 className="flex items-center gap-2 text-sm font-bold" style={accentStyles(area.color).text}>
                 <Icon className="size-4" />
                 {area.name}
               </h3>

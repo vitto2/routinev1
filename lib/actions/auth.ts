@@ -3,42 +3,67 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_TIMEZONE, isValidTimezone } from "@/lib/dates";
+import { loginSchema, signupSchema } from "@/lib/validation/auth";
+import { fieldErrors } from "@/lib/validation/errors";
 
 export interface AuthFormState {
   error: string | null;
   message: string | null;
+  fieldErrors?: Record<string, string>;
+}
+
+function authMessage(code: string | undefined, fallback: string) {
+  switch (code) {
+    case "user_already_exists":
+    case "email_exists":
+      return "Este email já está cadastrado. Tente entrar.";
+    case "weak_password":
+      return "Senha fraca. Use pelo menos 6 caracteres, misturando letras e números.";
+    case "over_email_send_rate_limit":
+    case "over_request_rate_limit":
+      return "Muitas tentativas. Aguarde alguns minutos e tente de novo.";
+    case "email_address_invalid":
+      return "Este email não é aceito. Verifique o endereço digitado.";
+    case "signup_disabled":
+      return "Novos cadastros estão desativados no momento.";
+    default:
+      return fallback;
+  }
 }
 
 export async function signUp(
   _prevState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const displayName = String(formData.get("display_name") ?? "").trim();
+  const parsed = signupSchema.safeParse({
+    display_name: String(formData.get("display_name") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+  });
+
+  if (!parsed.success) {
+    return { error: null, message: null, fieldErrors: fieldErrors(parsed.error) };
+  }
+
   const requestedTimezone = String(formData.get("timezone") ?? "");
   const timezone = isValidTimezone(requestedTimezone)
     ? requestedTimezone
     : DEFAULT_TIMEZONE;
 
-  if (!email || !password) {
-    return { error: "Preencha email e senha.", message: null };
-  }
-  if (password.length < 6) {
-    return { error: "A senha precisa ter pelo menos 6 caracteres.", message: null };
-  }
-
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
+    email: parsed.data.email,
+    password: parsed.data.password,
     options: {
-      data: { display_name: displayName || null, timezone },
+      data: { display_name: parsed.data.display_name || null, timezone },
     },
   });
 
   if (error) {
-    return { error: error.message, message: null };
+    return {
+      error: authMessage(error.code, "Não foi possível criar a conta. Tente novamente."),
+      message: null,
+    };
   }
 
   // Com "Confirm email" ligado no Supabase o cadastro não devolve sessão:
@@ -58,18 +83,17 @@ export async function signIn(
   _prevState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const parsed = loginSchema.safeParse({
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+  });
 
-  if (!email || !password) {
-    return { error: "Preencha email e senha.", message: null };
+  if (!parsed.success) {
+    return { error: null, message: null, fieldErrors: fieldErrors(parsed.error) };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
     if (error.code === "email_not_confirmed") {

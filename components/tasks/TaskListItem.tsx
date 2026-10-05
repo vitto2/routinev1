@@ -1,29 +1,33 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
-import { Check, Trash2 } from "lucide-react";
+import { useOptimistic, useState, useTransition } from "react";
+import { Check, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { toggleTaskCompletion, deleteTask } from "@/lib/actions/tasks";
 import { formatDisplayDate } from "@/lib/dates";
+import { TaskDialog } from "@/components/tasks/TaskDialog";
 import type { Task } from "@/types/domain";
 
-const PRIORITY_DOT: Record<Task["priority"], string> = {
-  high: "bg-destructive",
-  medium: "bg-amber-500",
-  low: "bg-muted-foreground/40",
+const PRIORITY: Record<Task["priority"], { dot: string; label: string }> = {
+  high: { dot: "bg-destructive", label: "Prioridade alta" },
+  medium: { dot: "bg-warning", label: "Prioridade média" },
+  low: { dot: "bg-muted-foreground", label: "Prioridade baixa" },
 };
 
 export function TaskListItem({
   task,
+  today,
   index = 0,
   overdue = false,
 }: {
   task: Task;
+  today: string;
   index?: number;
   overdue?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const [editing, setEditing] = useState(false);
   const [completed, setCompleted] = useOptimistic(
     task.completed,
     (_current, next: boolean) => next,
@@ -53,34 +57,37 @@ export function TaskListItem({
     });
   }
 
+  const priority = PRIORITY[task.priority];
+
   return (
     <div
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-      className="animate-rise flex items-center gap-2"
+      className="animate-rise flex items-center gap-1.5"
     >
       <button
         type="button"
         onClick={handleToggle}
+        aria-pressed={completed}
         className={cn(
-          "flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
-          completed && "border-primary/30 bg-primary/5",
+          "flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left shadow-sm transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
+          completed ? "border-transparent bg-success/10" : "border-border hover:bg-accent/40",
         )}
       >
         <span
           className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
+            "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
             completed
-              ? "animate-check border-primary bg-primary text-primary-foreground"
-              : "border-muted-foreground/30",
+              ? "animate-check border-transparent bg-success text-success-foreground"
+              : "border-input bg-card",
           )}
         >
-          {completed ? <Check className="size-4" /> : null}
+          {completed ? <Check className="size-[18px]" strokeWidth={3} /> : null}
         </span>
         <span className="min-w-0 flex-1">
           <span
             className={cn(
               "block truncate font-medium transition-colors duration-200",
-              completed && "text-muted-foreground line-through",
+              completed && "text-muted-foreground line-through decoration-1",
             )}
           >
             {task.title}
@@ -89,7 +96,7 @@ export function TaskListItem({
             <span
               className={cn(
                 "block text-xs",
-                overdue && !completed ? "text-destructive" : "text-muted-foreground",
+                overdue && !completed ? "font-medium text-destructive" : "text-muted-foreground",
               )}
             >
               {overdue ? `Venceu em ${formatDisplayDate(task.due_date)}` : null}
@@ -98,20 +105,30 @@ export function TaskListItem({
             </span>
           ) : null}
         </span>
-        <span
-          className={cn("size-2 shrink-0 rounded-full", PRIORITY_DOT[task.priority])}
-          aria-hidden
-        />
+        <span className={cn("size-2.5 shrink-0 rounded-full", priority.dot)} aria-hidden />
+        <span className="sr-only">{priority.label}</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        disabled={pending}
+        className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        aria-label={`Editar tarefa ${task.title}`}
+      >
+        <Pencil className="size-4" />
       </button>
       <button
         type="button"
         onClick={handleDelete}
         disabled={pending}
-        className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-destructive"
+        className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         aria-label={`Excluir tarefa ${task.title}`}
       >
         <Trash2 className="size-4" />
       </button>
+      {editing ? (
+        <TaskDialog open={editing} onOpenChange={setEditing} today={today} task={task} />
+      ) : null}
     </div>
   );
 }

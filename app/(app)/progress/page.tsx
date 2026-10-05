@@ -64,7 +64,7 @@ export default async function ProgressPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-xl font-semibold tracking-tight">Progresso</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Progresso</h1>
         <p className="text-sm text-muted-foreground">
           Sua consistência ao longo do tempo
         </p>
@@ -85,7 +85,7 @@ export default async function ProgressPage() {
 
       {perHabit.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Desempenho por hábito (mês)
           </h2>
           <div className="space-y-2">
@@ -110,7 +110,7 @@ export default async function ProgressPage() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="animate-rise rounded-2xl border border-border bg-card p-4">
+    <div className="animate-rise rounded-2xl border border-border bg-card p-4 shadow-sm">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
     </div>

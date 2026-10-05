@@ -21,7 +21,7 @@ export function BottomNav({ today }: { today: string }) {
   const isActive = (href: string) => pathname.startsWith(href);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
       <div className="mx-auto flex max-w-md items-stretch justify-between px-1 pb-[env(safe-area-inset-bottom)]">
         {LEFT_ITEMS.map((item) => (
           <NavLink key={item.href} {...item} active={isActive(item.href)} />
@@ -51,12 +51,20 @@ function NavLink({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors",
-        active ? "text-foreground" : "text-muted-foreground",
+        "flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-semibold transition-colors",
+        active ? "text-primary" : "text-muted-foreground hover:text-foreground",
       )}
     >
-      <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
+      <span
+        className={cn(
+          "flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200",
+          active && "bg-primary/15",
+        )}
+      >
+        <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
+      </span>
       {label}
     </Link>
   );

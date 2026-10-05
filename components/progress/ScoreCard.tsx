@@ -47,17 +47,17 @@ export function ScoreCard({
     <div
       key={burst > 0 ? `burst-${burst}` : "card"}
       className={cn(
-        "relative rounded-2xl border border-border bg-card p-4 transition-colors duration-300",
-        complete && "border-primary/40 bg-primary/5",
+        "relative rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors duration-300",
+        complete && "border-success/40 bg-success/10",
         burst > 0 && "animate-ring",
       )}
     >
       <div className="flex items-end justify-between">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm font-medium text-muted-foreground">
           {complete && celebrate ? "Dia completo. Ótimo trabalho!" : label}
         </p>
         {rounded !== null ? (
-          <p className="text-2xl font-semibold tabular-nums">{rounded}%</p>
+          <p className={cn("text-3xl font-bold tabular-nums", complete && "text-success")}>{rounded}%</p>
         ) : null}
       </div>
       {rounded !== null ? (
@@ -69,7 +69,10 @@ export function ScoreCard({
           aria-valuemax={100}
         >
           <div
-            className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+            className={cn(
+              "h-full rounded-full transition-[width,background-color] duration-500 ease-out",
+              complete ? "bg-success" : "bg-primary",
+            )}
             style={{ width: `${rounded}%` }}
           />
         </div>

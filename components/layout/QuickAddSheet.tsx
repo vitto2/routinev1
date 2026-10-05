@@ -11,7 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { TaskQuickCreateDialog } from "@/components/tasks/TaskQuickCreateDialog";
+import { TaskDialog } from "@/components/tasks/TaskDialog";
 
 export function QuickAddSheet({ today }: { today: string }) {
   const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ export function QuickAddSheet({ today }: { today: string }) {
           render={
             <Button
               size="icon"
-              className="h-14 w-14 -translate-y-5 rounded-full shadow-lg"
+              className="size-14 -translate-y-5 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/40 transition-transform duration-150 active:scale-90"
               aria-label="Adicionar"
             />
           }
@@ -64,11 +64,7 @@ export function QuickAddSheet({ today }: { today: string }) {
           </div>
         </SheetContent>
       </Sheet>
-      <TaskQuickCreateDialog
-        open={taskDialogOpen}
-        onOpenChange={setTaskDialogOpen}
-        defaultDate={today}
-      />
+      <TaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} today={today} />
     </>
   );
 }
@@ -86,7 +82,7 @@ function QuickAddOption({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 text-sm font-medium transition-colors hover:bg-accent"
+      className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 text-sm font-semibold transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
     >
       <Icon className="size-5" />
       {label}

@@ -31,11 +31,18 @@ const SYMBOL: Record<CellStatus, string> = {
   "not-scheduled": "—",
 };
 
+const LABEL: Record<CellStatus, string> = {
+  done: "Feito",
+  missed: "Não feito",
+  pending: "Em aberto",
+  "not-scheduled": "Não programado",
+};
+
 const STYLE: Record<CellStatus, string> = {
-  done: "text-emerald-600 dark:text-emerald-400",
+  done: "text-success",
   missed: "text-destructive",
-  pending: "text-muted-foreground/50",
-  "not-scheduled": "text-muted-foreground/25",
+  pending: "text-muted-foreground",
+  "not-scheduled": "text-muted-foreground",
 };
 
 export function WeekGrid({
@@ -52,47 +59,66 @@ export function WeekGrid({
   if (habits.length === 0) return null;
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-      <table className="w-full min-w-[420px] text-center text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="w-28 px-3 py-2 text-left text-xs font-medium text-muted-foreground">
-              Hábito
-            </th>
-            {days.map((day) => (
-              <th
-                key={day}
-                className={cn(
-                  "px-1 py-2 text-xs font-medium text-muted-foreground",
-                  day === todayISODate && "text-foreground",
-                )}
-              >
-                {WEEKDAY_LABELS[weekdayOf(day)]}
+    <div className="space-y-3">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
+        <table className="w-full min-w-[420px] text-center text-sm">
+          <thead>
+            <tr className="border-b border-border">
+              <th scope="col" className="w-28 px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground">
+                Hábito
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {habits.map((habit) => (
-            <tr key={habit.id} className="border-b border-border last:border-0">
-              <td className="truncate px-3 py-2 text-left font-medium">{habit.name}</td>
-              {days.map((day) => {
-                const status = statusFor(
-                  habit,
-                  day,
-                  todayISODate,
-                  logsByHabitAndDate.get(`${habit.id}:${day}`),
-                );
-                return (
-                  <td key={day} className={cn("px-1 py-2 font-medium", STYLE[status])}>
-                    {SYMBOL[status]}
-                  </td>
-                );
-              })}
+              {days.map((day) => (
+                <th
+                  key={day}
+                  scope="col"
+                  className={cn(
+                    "px-1 py-2.5 text-xs font-semibold text-muted-foreground",
+                    day === todayISODate && "bg-primary/10 text-primary",
+                  )}
+                >
+                  {WEEKDAY_LABELS[weekdayOf(day)]}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {habits.map((habit) => (
+              <tr key={habit.id} className="border-b border-border last:border-0">
+                <th scope="row" className="max-w-28 truncate px-3 py-3 text-left text-sm font-medium">
+                  {habit.name}
+                </th>
+                {days.map((day) => {
+                  const status = statusFor(
+                    habit,
+                    day,
+                    todayISODate,
+                    logsByHabitAndDate.get(`${habit.id}:${day}`),
+                  );
+                  return (
+                    <td
+                      key={day}
+                      aria-label={LABEL[status]}
+                      className={cn(
+                        "px-1 py-3 text-base font-bold",
+                        STYLE[status],
+                        day === todayISODate && "bg-primary/10",
+                      )}
+                    >
+                      {SYMBOL[status]}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <li><span className="font-bold text-success">✓</span> feito</li>
+        <li><span className="font-bold text-destructive">✕</span> não feito</li>
+        <li><span className="font-bold">○</span> em aberto</li>
+        <li><span className="font-bold">—</span> não programado</li>
+      </ul>
     </div>
   );
 }

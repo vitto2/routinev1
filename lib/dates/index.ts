@@ -77,4 +77,15 @@ export function isValidTimezone(value: string): boolean {
   }
 }
 
-export const WEEKDAY_LABELS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"] as const;
+/** Nomes completos, índice 0 = domingo (mesma convenção de habit_schedules.weekdays). */
+export const WEEKDAY_NAMES = [
+  "domingo",
+  "segunda-feira",
+  "terça-feira",
+  "quarta-feira",
+  "quinta-feira",
+  "sexta-feira",
+  "sábado",
+] as const;
+
+export const WEEKDAY_LABELS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
