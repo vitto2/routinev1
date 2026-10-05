@@ -2,9 +2,20 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_TIMEZONE } from "@/lib/dates";
 
 export interface AuthFormState {
   error: string | null;
+  message: string | null;
+}
+
+function validTimezone(value: string): string {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return value;
+  } catch {
+    return DEFAULT_TIMEZONE;
+  }
 }
 
 export async function signUp(
@@ -14,17 +25,19 @@ export async function signUp(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const displayName = String(formData.get("display_name") ?? "").trim();
-  const timezone = String(formData.get("timezone") ?? "America/Sao_Paulo");
+  const timezone = validTimezone(
+    String(formData.get("timezone") ?? "") || DEFAULT_TIMEZONE,
+  );
 
   if (!email || !password) {
-    return { error: "Preencha email e senha." };
+    return { error: "Preencha email e senha.", message: null };
   }
   if (password.length < 6) {
-    return { error: "A senha precisa ter pelo menos 6 caracteres." };
+    return { error: "A senha precisa ter pelo menos 6 caracteres.", message: null };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -33,7 +46,17 @@ export async function signUp(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: error.message, message: null };
+  }
+
+  // Com "Confirm email" ligado no Supabase o cadastro não devolve sessão:
+  // avisar em vez de redirecionar para uma rota que mandaria de volta ao login.
+  if (!data.session) {
+    return {
+      error: null,
+      message:
+        "Conta criada. Enviamos um link de confirmação para o seu email; confirme e depois entre.",
+    };
   }
 
   redirect("/today");
@@ -47,7 +70,7 @@ export async function signIn(
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
-    return { error: "Preencha email e senha." };
+    return { error: "Preencha email e senha.", message: null };
   }
 
   const supabase = await createClient();
@@ -57,7 +80,10 @@ export async function signIn(
   });
 
   if (error) {
-    return { error: "Email ou senha inválidos." };
+    if (error.code === "email_not_confirmed") {
+      return { error: "Confirme seu email antes de entrar.", message: null };
+    }
+    return { error: "Email ou senha inválidos.", message: null };
   }
 
   redirect("/today");

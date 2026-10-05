@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 
-const initialState: AuthFormState = { error: null };
+const initialState: AuthFormState = { error: null, message: null };
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(signIn, initialState);
