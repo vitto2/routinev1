@@ -21,18 +21,27 @@ export interface Database {
           display_name: string | null;
           timezone: string;
           created_at: string;
+          onboarded_at: string | null;
+          last_digest_date: string | null;
+          last_evening_date: string | null;
         };
         Insert: {
           id: string;
           display_name?: string | null;
           timezone?: string;
           created_at?: string;
+          onboarded_at?: string | null;
+          last_digest_date?: string | null;
+          last_evening_date?: string | null;
         };
         Update: {
           id?: string;
           display_name?: string | null;
           timezone?: string;
           created_at?: string;
+          onboarded_at?: string | null;
+          last_digest_date?: string | null;
+          last_evening_date?: string | null;
         };
         Relationships: [];
       };
@@ -170,6 +179,7 @@ export interface Database {
           priority: TaskPriority;
           completed: boolean;
           completed_at: string | null;
+          reminded_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -184,10 +194,35 @@ export interface Database {
           priority?: TaskPriority;
           completed?: boolean;
           completed_at?: string | null;
+          reminded_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]>;
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["push_subscriptions"]["Insert"]
+        >;
         Relationships: [];
       };
     };

@@ -2,20 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DEFAULT_TIMEZONE } from "@/lib/dates";
+import { DEFAULT_TIMEZONE, isValidTimezone } from "@/lib/dates";
 
 export interface AuthFormState {
   error: string | null;
   message: string | null;
-}
-
-function validTimezone(value: string): string {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-    return value;
-  } catch {
-    return DEFAULT_TIMEZONE;
-  }
 }
 
 export async function signUp(
@@ -25,9 +16,10 @@ export async function signUp(
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const displayName = String(formData.get("display_name") ?? "").trim();
-  const timezone = validTimezone(
-    String(formData.get("timezone") ?? "") || DEFAULT_TIMEZONE,
-  );
+  const requestedTimezone = String(formData.get("timezone") ?? "");
+  const timezone = isValidTimezone(requestedTimezone)
+    ? requestedTimezone
+    : DEFAULT_TIMEZONE;
 
   if (!email || !password) {
     return { error: "Preencha email e senha.", message: null };

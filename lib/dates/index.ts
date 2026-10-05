@@ -67,4 +67,14 @@ export function formatDisplayDate(dateISO: string): string {
   return `${d}/${m}/${y}`;
 }
 
+/** Valida um identificador IANA (ex.: "America/Sao_Paulo"). */
+export function isValidTimezone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const WEEKDAY_LABELS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"] as const;
