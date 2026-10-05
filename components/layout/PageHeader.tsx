@@ -1,0 +1,25 @@
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+
+export function PageHeader({
+  title,
+  backHref,
+}: {
+  title: string;
+  backHref?: string;
+}) {
+  return (
+    <div className="mb-6 flex items-center gap-2">
+      {backHref ? (
+        <Link
+          href={backHref}
+          className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-accent"
+          aria-label="Voltar"
+        >
+          <ChevronLeft className="size-4" />
+        </Link>
+      ) : null}
+      <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
+    </div>
+  );
+}
