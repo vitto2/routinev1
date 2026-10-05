@@ -1,31 +1,42 @@
-import { ListChecks, Repeat } from "lucide-react";
+import { AlarmClock, ListChecks, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateProfile } from "@/lib/data/profile";
-import { getActiveHabitsWithSchedules } from "@/lib/data/habits";
-import { getLogsForDate } from "@/lib/data/logs";
-import { getTasksForDate } from "@/lib/data/tasks";
-import { todayISO, formatDisplayDate, currentHour } from "@/lib/dates";
-import { scheduledHabitsOn, dailyScore } from "@/lib/scoring";
+import { getHabitsWithSchedules } from "@/lib/data/habits";
+import { getLogsForRange } from "@/lib/data/logs";
+import { getOverdueTasks, getTasksForDate } from "@/lib/data/tasks";
+import { todayISO, formatDisplayDate, currentHour, weekRangeOf } from "@/lib/dates";
+import { activeScheduleOn, isQuotaOn, isScheduledOn } from "@/lib/scheduling";
+import { completionsIn, dailyScore } from "@/lib/scoring";
 import { HabitListItem } from "@/components/habits/HabitListItem";
 import { TaskListItem } from "@/components/tasks/TaskListItem";
 import { EmptyState } from "@/components/layout/EmptyState";
-import { Progress } from "@/components/ui/progress";
+import { ScoreCard } from "@/components/progress/ScoreCard";
+import type { HabitLog } from "@/types/domain";
 
 export default async function TodayPage() {
   const { user } = await requireUser();
   const supabase = await createClient();
   const profile = await getOrCreateProfile(supabase, user.id);
   const today = todayISO(profile.timezone);
+  const week = weekRangeOf(today);
 
-  const [habits, logsByHabitId, tasks] = await Promise.all([
-    getActiveHabitsWithSchedules(supabase),
-    getLogsForDate(supabase, today),
+  const [habits, weekLogs, tasks, overdue] = await Promise.all([
+    getHabitsWithSchedules(supabase),
+    getLogsForRange(supabase, week.start, week.end),
     getTasksForDate(supabase, today),
+    getOverdueTasks(supabase, today),
   ]);
 
-  const scheduledToday = scheduledHabitsOn(habits, today);
-  const score = dailyScore(habits, logsByHabitId, today);
+  const todayHabits = habits.filter((h) => isScheduledOn(h.habit_schedules, today));
+
+  const logsToday = new Map<string, HabitLog>();
+  for (const habit of habits) {
+    const log = weekLogs.get(`${habit.id}:${today}`);
+    if (log) logsToday.set(habit.id, log);
+  }
+
+  const score = dailyScore(habits, logsToday, today);
   const tasksDone = tasks.filter((t) => t.completed).length;
 
   const greeting = getGreeting(profile.timezone);
@@ -42,30 +53,36 @@ export default async function TodayPage() {
           </h1>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex items-end justify-between">
-            <p className="text-sm text-muted-foreground">
-              {score.scheduled === 0
-                ? "Nenhum hábito programado para hoje"
-                : `Você concluiu ${score.completed} de ${score.scheduled} hábitos`}
-            </p>
-            {score.percent !== null ? (
-              <p className="text-2xl font-semibold tabular-nums">
-                {Math.round(score.percent * 100)}%
-              </p>
-            ) : null}
-          </div>
-          {score.percent !== null ? (
-            <Progress value={score.percent * 100} className="mt-3 h-2" />
-          ) : null}
-        </div>
+        <ScoreCard
+          celebrate
+          percent={score.percent}
+          label={
+            score.scheduled === 0
+              ? "Nenhum hábito de dia fixo para hoje"
+              : `Você concluiu ${score.completed} de ${score.scheduled} hábitos`
+          }
+        />
       </header>
+
+      {overdue.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-destructive">
+            <AlarmClock className="size-4" />
+            Atrasadas ({overdue.length})
+          </h2>
+          <div className="space-y-2">
+            {overdue.map((task, i) => (
+              <TaskListItem key={task.id} task={task} index={i} overdue />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Hábitos de hoje
         </h2>
-        {scheduledToday.length === 0 ? (
+        {todayHabits.length === 0 ? (
           <EmptyState
             icon={Repeat}
             title="Você ainda não possui hábitos para hoje."
@@ -74,14 +91,28 @@ export default async function TodayPage() {
           />
         ) : (
           <div className="space-y-2">
-            {scheduledToday.map((habit) => (
-              <HabitListItem
-                key={habit.id}
-                habit={habit}
-                log={logsByHabitId.get(habit.id)}
-                dateISO={today}
-              />
-            ))}
+            {todayHabits.map((habit, i) => {
+              const target = isQuotaOn(habit.habit_schedules, today)
+                ? activeScheduleOn(habit.habit_schedules, today)?.frequency_target
+                : null;
+              return (
+                <HabitListItem
+                  key={habit.id}
+                  habit={habit}
+                  index={i}
+                  log={logsToday.get(habit.id)}
+                  dateISO={today}
+                  weekProgress={
+                    target
+                      ? {
+                          done: completionsIn(habit.id, weekLogs, week.days),
+                          target,
+                        }
+                      : undefined
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </section>
@@ -101,8 +132,8 @@ export default async function TodayPage() {
           <EmptyState icon={ListChecks} title="Nenhuma tarefa para hoje." />
         ) : (
           <div className="space-y-2">
-            {tasks.map((task) => (
-              <TaskListItem key={task.id} task={task} />
+            {tasks.map((task, i) => (
+              <TaskListItem key={task.id} task={task} index={i} />
             ))}
           </div>
         )}

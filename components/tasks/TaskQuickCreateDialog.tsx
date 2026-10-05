@@ -32,12 +32,14 @@ export function TaskQuickCreateDialog({
 }) {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState(defaultDate);
+  const [dueTime, setDueTime] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [pending, startTransition] = useTransition();
 
   function reset() {
     setTitle("");
     setDueDate(defaultDate);
+    setDueTime("");
     setPriority("medium");
   }
 
@@ -47,7 +49,12 @@ export function TaskQuickCreateDialog({
 
     startTransition(async () => {
       try {
-        await createTask({ title, due_date: dueDate, priority });
+        await createTask({
+          title,
+          due_date: dueDate,
+          due_time: dueTime || null,
+          priority,
+        });
         toast.success("Tarefa criada");
         reset();
         onOpenChange(false);
@@ -88,7 +95,7 @@ export function TaskQuickCreateDialog({
             </div>
             <div className="space-y-2">
               <Label>Prioridade</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
+              <Select value={priority} onValueChange={(v) => setPriority((v ?? "medium") as typeof priority)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -99,6 +106,15 @@ export function TaskQuickCreateDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="task-time">Horário (opcional, ativa lembrete)</Label>
+            <Input
+              id="task-time"
+              type="time"
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
+            />
           </div>
           <DialogFooter>
             <Button type="submit" className="w-full" disabled={pending}>

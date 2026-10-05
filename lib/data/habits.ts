@@ -3,13 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import type { HabitWithSchedules } from "@/types/domain";
 
-export async function getActiveHabitsWithSchedules(
+/** Todos os hábitos (inclusive arquivados): o histórico precisa deles. */
+export async function getHabitsWithSchedules(
   supabase: SupabaseClient<Database>,
 ): Promise<HabitWithSchedules[]> {
   const { data, error } = await supabase
     .from("habits")
     .select("*, habit_schedules(*)")
-    .eq("active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 

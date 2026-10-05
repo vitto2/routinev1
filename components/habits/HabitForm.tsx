@@ -44,9 +44,6 @@ export function HabitForm({
   const [targetValue, setTargetValue] = useState(
     habit?.target_value?.toString() ?? "",
   );
-  const [targetUnit, setTargetUnit] = useState<"ml" | "min">(
-    (habit?.target_unit as "ml" | "min") ?? "ml",
-  );
 
   const [scheduleType, setScheduleType] = useState<ScheduleInput["schedule_type"]>(
     currentSchedule?.schedule_type ?? "daily",
@@ -116,7 +113,11 @@ export function HabitForm({
           ? Number(targetValue) || null
           : null,
       target_unit:
-        trackingType === "quantity" || trackingType === "time" ? targetUnit : null,
+        trackingType === "quantity"
+          ? ("ml" as const)
+          : trackingType === "time"
+            ? ("min" as const)
+            : null,
       icon: habit?.icon ?? null,
       color: habit?.color ?? null,
       schedule: buildSchedule(),
@@ -242,21 +243,9 @@ export function HabitForm({
           </div>
           <div className="space-y-2">
             <Label>Unidade</Label>
-            <Select
-              value={targetUnit}
-              onValueChange={(v) => setTargetUnit(v as "ml" | "min")}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {trackingType === "quantity" ? (
-                  <SelectItem value="ml">ml</SelectItem>
-                ) : (
-                  <SelectItem value="min">min</SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            <p className="flex h-8 items-center rounded-lg border border-border px-2.5 text-sm text-muted-foreground">
+              {trackingType === "quantity" ? "ml" : "minutos"}
+            </p>
           </div>
         </div>
       ) : null}

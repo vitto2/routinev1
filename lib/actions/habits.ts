@@ -9,17 +9,70 @@ import { habitSchema, type HabitInput } from "@/lib/validation/habit";
 import type { Database } from "@/types/database.types";
 
 type Supabase = SupabaseClient<Database>;
+type ScheduleColumns = ReturnType<typeof scheduleColumns>;
 
 function scheduleColumns(schedule: HabitInput["schedule"]) {
   return {
     schedule_type: schedule.schedule_type,
-    weekdays: "weekdays" in schedule ? schedule.weekdays : null,
+    weekdays:
+      "weekdays" in schedule ? [...schedule.weekdays].sort((a, b) => a - b) : null,
     frequency_target:
       "frequency_target" in schedule ? schedule.frequency_target : null,
     interval_days: "interval_days" in schedule ? schedule.interval_days : null,
-    specific_date:
-      "specific_date" in schedule ? schedule.specific_date : null,
+    specific_date: "specific_date" in schedule ? schedule.specific_date : null,
   };
+}
+
+function sameSchedule(
+  current: Database["public"]["Tables"]["habit_schedules"]["Row"],
+  next: ScheduleColumns,
+) {
+  return (
+    current.schedule_type === next.schedule_type &&
+    JSON.stringify(current.weekdays ?? null) === JSON.stringify(next.weekdays) &&
+    (current.frequency_target ?? null) === next.frequency_target &&
+    (current.interval_days ?? null) === next.interval_days &&
+    (current.specific_date ?? null) === next.specific_date
+  );
+}
+
+async function getCurrentSchedule(supabase: Supabase, habitId: string) {
+  const { data, error } = await supabase
+    .from("habit_schedules")
+    .select("*")
+    .eq("habit_id", habitId)
+    .is("end_date", null)
+    .order("start_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Encerra a agenda vigente sem apagar histórico: se ela começou antes de
+ * hoje, fecha em ontem; se começou hoje (nunca valeu em dia passado), some.
+ */
+async function endCurrentSchedule(
+  supabase: Supabase,
+  current: Database["public"]["Tables"]["habit_schedules"]["Row"],
+  today: string,
+) {
+  if (current.start_date >= today) {
+    const { error } = await supabase
+      .from("habit_schedules")
+      .delete()
+      .eq("id", current.id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const { error } = await supabase
+    .from("habit_schedules")
+    .update({ end_date: addDaysISO(today, -1) })
+    .eq("id", current.id);
+  if (error) throw new Error(error.message);
 }
 
 export async function createHabit(input: HabitInput) {
@@ -28,24 +81,9 @@ export async function createHabit(input: HabitInput) {
   const profile = await getOrCreateProfile(supabase, user.id);
   const today = todayISO(profile.timezone);
 
-  // Hábitos de evitação são sempre registrados como checkbox
-  // (cumpri/não cumpri); a semântica invertida fica na UI.
-  const trackingType = data.habit_type === "avoid" ? "checkbox" : data.tracking_type;
-
   const { data: habit, error } = await supabase
     .from("habits")
-    .insert({
-      user_id: user.id,
-      pillar_id: data.pillar_id ?? null,
-      name: data.name,
-      description: data.description ?? null,
-      habit_type: data.habit_type,
-      tracking_type: trackingType,
-      target_value: data.target_value ?? null,
-      target_unit: data.target_unit ?? null,
-      icon: data.icon ?? null,
-      color: data.color ?? null,
-    })
+    .insert(habitRow(data, user.id))
     .select("id")
     .single();
 
@@ -62,18 +100,23 @@ export async function createHabit(input: HabitInput) {
   revalidatePath("/", "layout");
 }
 
-async function closeCurrentSchedule(
-  supabase: Supabase,
-  habitId: string,
-  today: string,
-) {
-  const { error } = await supabase
-    .from("habit_schedules")
-    .update({ end_date: addDaysISO(today, -1) })
-    .eq("habit_id", habitId)
-    .is("end_date", null);
+/** Hábitos de evitação são sempre checkbox; unidade deriva do tipo de medição. */
+function habitRow(data: HabitInput, userId: string) {
+  const trackingType = data.habit_type === "avoid" ? "checkbox" : data.tracking_type;
+  const measured = trackingType === "quantity" || trackingType === "time";
 
-  if (error) throw new Error(error.message);
+  return {
+    user_id: userId,
+    pillar_id: data.pillar_id ?? null,
+    name: data.name,
+    description: data.description ?? null,
+    habit_type: data.habit_type,
+    tracking_type: trackingType,
+    target_value: measured ? (data.target_value ?? null) : null,
+    target_unit: measured ? (trackingType === "time" ? "min" : "ml") : null,
+    icon: data.icon ?? null,
+    color: data.color ?? null,
+  };
 }
 
 export async function updateHabit(habitId: string, input: HabitInput) {
@@ -82,41 +125,55 @@ export async function updateHabit(habitId: string, input: HabitInput) {
   const profile = await getOrCreateProfile(supabase, user.id);
   const today = todayISO(profile.timezone);
 
-  const trackingType = data.habit_type === "avoid" ? "checkbox" : data.tracking_type;
+  const { user_id: _userId, ...fields } = habitRow(data, user.id);
+  void _userId;
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("habits")
-    .update({
-      pillar_id: data.pillar_id ?? null,
-      name: data.name,
-      description: data.description ?? null,
-      habit_type: data.habit_type,
-      tracking_type: trackingType,
-      target_value: data.target_value ?? null,
-      target_unit: data.target_unit ?? null,
-      icon: data.icon ?? null,
-      color: data.color ?? null,
-    })
-    .eq("id", habitId);
+    .update(fields)
+    .eq("id", habitId)
+    .select("active")
+    .single();
 
   if (error) throw new Error(error.message);
 
-  // Alterar frequência nunca sobrescreve histórico: fecha a linha vigente e
-  // cria uma nova a partir de hoje.
-  await closeCurrentSchedule(supabase, habitId, today);
-  const { error: scheduleError } = await supabase.from("habit_schedules").insert({
-    habit_id: habitId,
-    start_date: today,
-    ...scheduleColumns(data.schedule),
-  });
+  // Habito arquivado não ganha agenda nova (voltaria a aparecer no histórico).
+  if (updated.active) {
+    const next = scheduleColumns(data.schedule);
+    const current = await getCurrentSchedule(supabase, habitId);
 
-  if (scheduleError) throw new Error(scheduleError.message);
+    if (!current) {
+      const { error: insertError } = await supabase
+        .from("habit_schedules")
+        .insert({ habit_id: habitId, start_date: today, ...next });
+      if (insertError) throw new Error(insertError.message);
+    } else if (!sameSchedule(current, next)) {
+      if (current.start_date >= today) {
+        // Mesma data de início: edita no lugar (não existe histórico a preservar).
+        const { error: updateError } = await supabase
+          .from("habit_schedules")
+          .update(next)
+          .eq("id", current.id);
+        if (updateError) throw new Error(updateError.message);
+      } else {
+        // Alterar frequência nunca sobrescreve histórico: fecha a vigente
+        // e cria uma nova a partir de hoje.
+        await endCurrentSchedule(supabase, current, today);
+        const { error: insertError } = await supabase
+          .from("habit_schedules")
+          .insert({ habit_id: habitId, start_date: today, ...next });
+        if (insertError) throw new Error(insertError.message);
+      }
+    }
+  }
 
   revalidatePath("/", "layout");
 }
 
 export async function archiveHabit(habitId: string) {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+  const profile = await getOrCreateProfile(supabase, user.id);
+  const today = todayISO(profile.timezone);
 
   const { error } = await supabase
     .from("habits")
@@ -125,11 +182,18 @@ export async function archiveHabit(habitId: string) {
 
   if (error) throw new Error(error.message);
 
+  // Fecha a agenda vigente: dias passados continuam contando no histórico,
+  // dias futuros deixam de exibir o hábito.
+  const current = await getCurrentSchedule(supabase, habitId);
+  if (current) await endCurrentSchedule(supabase, current, today);
+
   revalidatePath("/", "layout");
 }
 
 export async function unarchiveHabit(habitId: string) {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+  const profile = await getOrCreateProfile(supabase, user.id);
+  const today = todayISO(profile.timezone);
 
   const { error } = await supabase
     .from("habits")
@@ -137,6 +201,28 @@ export async function unarchiveHabit(habitId: string) {
     .eq("id", habitId);
 
   if (error) throw new Error(error.message);
+
+  const { data: last } = await supabase
+    .from("habit_schedules")
+    .select("*")
+    .eq("habit_id", habitId)
+    .order("start_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const open = await getCurrentSchedule(supabase, habitId);
+  if (!open) {
+    const { error: insertError } = await supabase.from("habit_schedules").insert({
+      habit_id: habitId,
+      start_date: today,
+      schedule_type: last?.schedule_type ?? "daily",
+      weekdays: last?.weekdays ?? null,
+      frequency_target: last?.frequency_target ?? null,
+      interval_days: last?.interval_days ?? null,
+      specific_date: last?.specific_date ?? null,
+    });
+    if (insertError) throw new Error(insertError.message);
+  }
 
   revalidatePath("/", "layout");
 }

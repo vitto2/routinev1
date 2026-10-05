@@ -16,3 +16,20 @@ export async function getTasksForDate(
   if (error) throw new Error(error.message);
   return data;
 }
+
+/** Tarefas pendentes de dias anteriores (não somem quando o dia passa). */
+export async function getOverdueTasks(
+  supabase: SupabaseClient<Database>,
+  todayISODate: string,
+) {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("completed", false)
+    .lt("due_date", todayISODate)
+    .order("due_date", { ascending: true })
+    .limit(50);
+
+  if (error) throw new Error(error.message);
+  return data;
+}

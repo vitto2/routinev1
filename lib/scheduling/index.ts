@@ -15,6 +15,24 @@ export function activeScheduleOn(
   );
 }
 
+/** Hábito de cota semanal ("X vezes por semana") vigente nessa data? */
+export function isQuotaOn(schedules: HabitSchedule[], dateISO: string): boolean {
+  return activeScheduleOn(schedules, dateISO)?.schedule_type === "x_per_week";
+}
+
+/**
+ * Primeiro dia em que o hábito passou a valer, no calendário local do
+ * usuário (start_date da agenda mais antiga). Usar isso em vez de
+ * created_at, que é UTC e pode cair no dia seguinte.
+ */
+export function habitStartDate(schedules: HabitSchedule[]): string | null {
+  if (schedules.length === 0) return null;
+  return schedules.reduce(
+    (min, s) => (compareISO(s.start_date, min) < 0 ? s.start_date : min),
+    schedules[0].start_date,
+  );
+}
+
 /**
  * Hábito estava programado para acontecer em `dateISO`?
  * Base para score e streak — dias não programados nunca entram no

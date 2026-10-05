@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { Check, X, Circle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getActiveHabitsWithSchedules } from "@/lib/data/habits";
+import { getHabitsWithSchedules } from "@/lib/data/habits";
 import { getLogsForDate } from "@/lib/data/logs";
 import { getTasksForDate } from "@/lib/data/tasks";
 import { todayISO, formatDisplayDate, compareISO } from "@/lib/dates";
-import { scheduledHabitsOn, dailyScore } from "@/lib/scoring";
+import { dailyScore } from "@/lib/scoring";
+import { isQuotaOn, isScheduledOn } from "@/lib/scheduling";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateProfile } from "@/lib/data/profile";
@@ -27,12 +28,17 @@ export default async function DayDetailPage({
   if (compareISO(date, today) > 0) notFound();
 
   const [habits, logsByHabitId, tasks] = await Promise.all([
-    getActiveHabitsWithSchedules(supabase),
+    getHabitsWithSchedules(supabase),
     getLogsForDate(supabase, date),
     getTasksForDate(supabase, date),
   ]);
 
-  const scheduled = scheduledHabitsOn(habits, date);
+  // Hábitos de cota semanal só aparecem no dia em que foram feitos.
+  const scheduled = habits.filter(
+    (h) =>
+      isScheduledOn(h.habit_schedules, date) &&
+      (!isQuotaOn(h.habit_schedules, date) || logsByHabitId.get(h.id)?.completed),
+  );
   const score = dailyScore(habits, logsByHabitId, date);
   const tasksDone = tasks.filter((t) => t.completed).length;
 

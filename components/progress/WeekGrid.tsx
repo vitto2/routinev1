@@ -1,5 +1,5 @@
 import { compareISO, WEEKDAY_LABELS, weekdayOf } from "@/lib/dates";
-import { isScheduledOn } from "@/lib/scheduling";
+import { isQuotaOn, isScheduledOn } from "@/lib/scheduling";
 import { cn } from "@/lib/utils";
 import type { HabitLog, HabitWithSchedules } from "@/types/domain";
 
@@ -18,6 +18,8 @@ function statusFor(
   const done = log?.completed ?? false;
 
   if (done) return "done";
+  // Cota semanal: dias sem registro são só oportunidades, não falhas.
+  if (isQuotaOn(habit.habit_schedules, day)) return "pending";
   if (isFuture || isToday) return "pending";
   return "missed";
 }
