@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "check:contrast": "node scripts/check-contrast.mjs",
+    "check:db": "node scripts/check-db.mjs",
     "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
