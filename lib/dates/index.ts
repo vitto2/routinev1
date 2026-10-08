@@ -88,4 +88,87 @@ export const WEEKDAY_NAMES = [
   "sábado",
 ] as const;
 
+/** Plural para frases ("às terças"), índice 0 = domingo. */
+export const WEEKDAY_PLURAL = [
+  "domingos",
+  "segundas",
+  "terças",
+  "quartas",
+  "quintas",
+  "sextas",
+  "sábados",
+] as const;
+
 export const WEEKDAY_LABELS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
+
+// ---------------------------------------------------------------------------
+// Meses ("AAAA-MM")
+// ---------------------------------------------------------------------------
+
+const MONTH_NAMES = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+] as const;
+
+const MONTH_REGEX = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
+export function isValidMonth(value: string): boolean {
+  return MONTH_REGEX.test(value);
+}
+
+/** "2026-10-08" -> "2026-10" */
+export function monthOf(dateISO: string): string {
+  return dateISO.slice(0, 7);
+}
+
+/** "2026-10" -> "2026-10-01" */
+export function monthStart(month: string): string {
+  return `${month}-01`;
+}
+
+export function daysInMonth(month: string): number {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+/** Último dia do mês: "2026-10" -> "2026-10-31" */
+export function monthEnd(month: string): string {
+  return `${month}-${String(daysInMonth(month)).padStart(2, "0")}`;
+}
+
+export function addMonths(month: string, amount: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const total = y * 12 + (m - 1) + amount;
+  const year = Math.floor(total / 12);
+  const monthIndex = ((total % 12) + 12) % 12;
+  return `${String(year).padStart(4, "0")}-${String(monthIndex + 1).padStart(2, "0")}`;
+}
+
+/** "2026-10" -> "outubro de 2026" */
+export function monthLabel(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return `${MONTH_NAMES[m - 1]} de ${y}`;
+}
+
+/** "2026-10" -> "out" (para eixos de gráfico) */
+export function monthShort(month: string): string {
+  const [, m] = month.split("-").map(Number);
+  return MONTH_NAMES[m - 1].slice(0, 3);
+}
+
+/** Todas as datas de um mês, em ordem. */
+export function daysOfMonth(month: string): string[] {
+  return Array.from({ length: daysInMonth(month) }, (_, i) =>
+    `${month}-${String(i + 1).padStart(2, "0")}`,
+  );
+}

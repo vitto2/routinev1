@@ -1,4 +1,5 @@
-import { compareISO, WEEKDAY_LABELS, weekdayOf } from "@/lib/dates";
+import Link from "next/link";
+import { compareISO, formatDisplayDate, WEEKDAY_LABELS, weekdayOf } from "@/lib/dates";
 import { isQuotaOn, isScheduledOn } from "@/lib/scheduling";
 import { cn } from "@/lib/utils";
 import type { HabitLog, HabitWithSchedules } from "@/types/domain";
@@ -76,7 +77,17 @@ export function WeekGrid({
                     day === todayISODate && "bg-primary/10 text-primary",
                   )}
                 >
-                  {WEEKDAY_LABELS[weekdayOf(day)]}
+                  {compareISO(day, todayISODate) <= 0 ? (
+                    <Link
+                      href={`/day/${day}`}
+                      aria-label={`Abrir ${formatDisplayDate(day)}`}
+                      className="block rounded-md py-1 underline-offset-4 hover:underline"
+                    >
+                      {WEEKDAY_LABELS[weekdayOf(day)]}
+                    </Link>
+                  ) : (
+                    WEEKDAY_LABELS[weekdayOf(day)]
+                  )}
                 </th>
               ))}
             </tr>
@@ -97,14 +108,28 @@ export function WeekGrid({
                   return (
                     <td
                       key={day}
-                      aria-label={LABEL[status]}
+                      aria-label={
+                        status === "not-scheduled" || compareISO(day, todayISODate) > 0
+                          ? LABEL[status]
+                          : undefined
+                      }
                       className={cn(
                         "px-1 py-3 text-base font-bold",
                         STYLE[status],
                         day === todayISODate && "bg-primary/10",
                       )}
                     >
-                      {SYMBOL[status]}
+                      {status !== "not-scheduled" && compareISO(day, todayISODate) <= 0 ? (
+                        <Link
+                          href={`/day/${day}`}
+                          aria-label={`${LABEL[status]}, ${habit.name}, ${formatDisplayDate(day)}. Abrir o dia`}
+                          className="flex min-h-11 items-center justify-center rounded-lg transition-colors hover:bg-accent"
+                        >
+                          {SYMBOL[status]}
+                        </Link>
+                      ) : (
+                        SYMBOL[status]
+                      )}
                     </td>
                   );
                 })}

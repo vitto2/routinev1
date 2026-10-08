@@ -4,7 +4,7 @@ import { useOptimistic, useState, useTransition } from "react";
 import { Check, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { toggleTaskCompletion, deleteTask } from "@/lib/actions/tasks";
+import { setTaskCompletion, deleteTask } from "@/lib/actions/tasks";
 import { formatDisplayDate } from "@/lib/dates";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import type { Task } from "@/types/domain";
@@ -33,15 +33,27 @@ export function TaskListItem({
     (_current, next: boolean) => next,
   );
 
-  function handleToggle() {
+  /** Grava o estado desejado (não "alternar"): o "Desfazer" nunca inverte por engano. */
+  function commit(next: boolean, announce: boolean) {
     startTransition(async () => {
-      setCompleted(!completed);
+      setCompleted(next);
       try {
-        await toggleTaskCompletion(task.id);
+        await setTaskCompletion(task.id, next);
+        if (next && announce) {
+          toast(`Tarefa concluída: ${task.title}`, {
+            id: "task-feedback",
+            duration: 4000,
+            action: { label: "Desfazer", onClick: () => commit(false, false) },
+          });
+        }
       } catch {
         toast.error("Não foi possível atualizar a tarefa");
       }
     });
+  }
+
+  function handleToggle() {
+    commit(!completed, true);
   }
 
   function handleDelete() {

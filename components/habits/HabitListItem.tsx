@@ -1,11 +1,23 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
-import { Check, Plus, Minus } from "lucide-react";
+import { useOptimistic, useState, useTransition } from "react";
+import { Check, Minus, NotebookPen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { toggleHabitCompletion, addHabitProgress } from "@/lib/actions/habitLogs";
-import { ICONS_BY_NAME, accentStyles, readableOn, DEFAULT_ACCENT } from "@/lib/constants/appearance";
+import {
+  setHabitCompletion,
+  setHabitValue,
+  type LogResult,
+} from "@/lib/actions/habitLogs";
+import { celebrationMessage, type StreakUnit } from "@/lib/gamification";
+import {
+  ICONS_BY_NAME,
+  accentStyles,
+  readableOn,
+  DEFAULT_ACCENT,
+} from "@/lib/constants/appearance";
+import { HabitNoteDialog } from "@/components/habits/HabitNoteDialog";
+import { StreakBadge } from "@/components/habits/StreakBadge";
 import type { HabitLog, HabitWithSchedules } from "@/types/domain";
 
 const QUICK_INCREMENTS: Record<string, number[]> = {
@@ -13,14 +25,15 @@ const QUICK_INCREMENTS: Record<string, number[]> = {
   min: [15, 30],
 };
 
-type LogState = { completed: boolean; value: number };
-type LogAction = { type: "toggle" } | { type: "add"; delta: number; target: number };
+const TOAST_ID = "habit-feedback";
 
-function reduceLog(state: LogState, action: LogAction): LogState {
-  if (action.type === "toggle") return { ...state, completed: !state.completed };
-  const value = Math.max(0, state.value + action.delta);
-  const completed = action.target > 0 ? value >= action.target : value > 0;
-  return { value, completed };
+type LogState = { completed: boolean; value: number };
+
+export interface StreakView {
+  current: number;
+  unit: StreakUnit;
+  /** a janela de cálculo acabou antes de a sequência terminar */
+  capped?: boolean;
 }
 
 function CheckCircle({ done, color }: { done: boolean; color: string }) {
@@ -37,6 +50,27 @@ function CheckCircle({ done, color }: { done: boolean; color: string }) {
   );
 }
 
+function NoteButton({ hasNote, onClick }: { hasNote: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={hasNote ? "Editar nota" : "Adicionar nota"}
+      className={cn(
+        "relative flex size-10 shrink-0 items-center justify-center rounded-full transition-colors",
+        hasNote
+          ? "bg-primary/10 text-primary hover:bg-primary/15"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      )}
+    >
+      <NotebookPen className="size-4" />
+      {hasNote ? (
+        <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary" aria-hidden />
+      ) : null}
+    </button>
+  );
+}
+
 export function HabitListItem({
   habit,
   log,
@@ -45,6 +79,7 @@ export function HabitListItem({
   weekProgress,
   color,
   iconName,
+  streak,
 }: {
   habit: HabitWithSchedules;
   log: HabitLog | undefined;
@@ -54,33 +89,65 @@ export function HabitListItem({
   /** cor do hábito, ou do pilar quando o hábito não tem a sua */
   color?: string | null;
   iconName?: string | null;
+  streak?: StreakView;
 }) {
   const [pending, startTransition] = useTransition();
-  const [state, applyOptimistic] = useOptimistic<LogState, LogAction>(
-    { completed: log?.completed ?? false, value: log?.value ?? 0 },
-    reduceLog,
+  const [state, setOptimistic] = useOptimistic<LogState, LogState>(
+    { completed: log?.completed ?? false, value: Number(log?.value ?? 0) },
+    (_current, next) => next,
   );
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteOverride, setNoteOverride] = useState<string | null | undefined>(undefined);
+  const note = noteOverride === undefined ? (log?.note ?? null) : noteOverride;
 
   const accentColor = color || DEFAULT_ACCENT;
   const accent = accentStyles(accentColor);
   const Icon = iconName ? ICONS_BY_NAME[iconName] : undefined;
 
-  function handleToggle() {
+  function announce(result: LogResult, undo: () => void) {
+    const message = celebrationMessage(habit.name, result.streak.current, result.streak.unit, {
+      milestone: result.milestone,
+      newBest: result.newBest,
+    });
+    const action = { label: "Desfazer", onClick: undo };
+
+    if (message) {
+      toast.success(message.title, {
+        id: TOAST_ID,
+        description: message.description,
+        duration: 6000,
+        action,
+      });
+    } else {
+      toast(`Concluído: ${habit.name}`, { id: TOAST_ID, duration: 4000, action });
+    }
+  }
+
+  /** Grava o estado de marcação desejado; `announceDone` mostra o aviso com "Desfazer". */
+  function commitCompletion(next: boolean, announceDone: boolean) {
     startTransition(async () => {
-      applyOptimistic({ type: "toggle" });
+      setOptimistic({ completed: next, value: state.value });
       try {
-        await toggleHabitCompletion(habit.id, dateISO);
+        const result = await setHabitCompletion(habit.id, dateISO, next);
+        if (next && announceDone) announce(result, () => commitCompletion(false, false));
       } catch {
         toast.error("Não foi possível atualizar");
       }
     });
   }
 
-  function handleAdd(delta: number) {
+  /** Grava o valor total do dia (quantidade/tempo). */
+  function commitValue(nextValue: number, previousValue: number, announceDone: boolean) {
+    const target = habit.target_value ?? 0;
+    const completed = target > 0 ? nextValue >= target : nextValue > 0;
+
     startTransition(async () => {
-      applyOptimistic({ type: "add", delta, target: habit.target_value ?? 0 });
+      setOptimistic({ completed, value: nextValue });
       try {
-        await addHabitProgress(habit.id, dateISO, delta);
+        const result = await setHabitValue(habit.id, dateISO, nextValue);
+        if (announceDone && result.completed && !state.completed) {
+          announce(result, () => commitValue(previousValue, nextValue, false));
+        }
       } catch {
         toast.error("Não foi possível atualizar");
       }
@@ -98,6 +165,22 @@ export function HabitListItem({
     </span>
   ) : null;
 
+  const noteDialog = (
+    <HabitNoteDialog
+      open={noteOpen}
+      onOpenChange={setNoteOpen}
+      habitId={habit.id}
+      habitName={habit.name}
+      dateISO={dateISO}
+      initialNote={note}
+      onSaved={setNoteOverride}
+    />
+  );
+
+  const streakBadge = streak ? (
+    <StreakBadge current={streak.current} unit={streak.unit} capped={streak.capped} />
+  ) : null;
+
   if (habit.tracking_type === "quantity" || habit.tracking_type === "time") {
     return (
       <div style={delay} className="animate-rise">
@@ -106,32 +189,37 @@ export function HabitListItem({
           value={state.value}
           completed={state.completed}
           pending={pending}
-          onAdd={handleAdd}
+          onChange={(next) => commitValue(next, state.value, true)}
           color={accentColor}
           bubble={bubble}
+          streakBadge={streakBadge}
+          note={
+            <NoteButton hasNote={Boolean(note)} onClick={() => setNoteOpen(true)} />
+          }
         />
+        {noteOpen ? noteDialog : null}
       </div>
     );
   }
 
   const isAvoid = habit.habit_type === "avoid";
-  const subtitle = isAvoid
-    ? state.completed
-      ? "Consegui evitar hoje"
-      : "Hábito a evitar"
-    : weekProgress
-      ? `${weekProgress.done}/${weekProgress.target} nesta semana`
-      : null;
+  const subtitleParts: React.ReactNode[] = [];
+  if (isAvoid) {
+    subtitleParts.push(state.completed ? "Consegui evitar hoje" : "Hábito a evitar");
+  } else if (weekProgress) {
+    subtitleParts.push(`${weekProgress.done}/${weekProgress.target} nesta semana`);
+  }
+  if (streakBadge) subtitleParts.push(streakBadge);
 
   return (
-    <div style={delay} className="animate-rise">
+    <div style={delay} className="animate-rise flex items-center gap-1.5">
       <button
         type="button"
-        onClick={handleToggle}
+        onClick={() => commitCompletion(!state.completed, true)}
         aria-pressed={state.completed}
         style={state.completed ? accent.soft : undefined}
         className={cn(
-          "flex min-h-16 w-full items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left shadow-sm transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
+          "flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left shadow-sm transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
           state.completed ? "border-transparent" : "border-border hover:bg-accent/40",
         )}
       >
@@ -145,12 +233,18 @@ export function HabitListItem({
           >
             {habit.name}
           </span>
-          {subtitle ? (
-            <span className="block text-xs text-muted-foreground">{subtitle}</span>
+          {subtitleParts.length > 0 ? (
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              {subtitleParts.map((part, i) => (
+                <span key={i}>{part}</span>
+              ))}
+            </span>
           ) : null}
         </span>
         {bubble}
       </button>
+      <NoteButton hasNote={Boolean(note)} onClick={() => setNoteOpen(true)} />
+      {noteOpen ? noteDialog : null}
     </div>
   );
 }
@@ -160,17 +254,21 @@ function ProgressHabitRow({
   value,
   completed,
   pending,
-  onAdd,
+  onChange,
   color,
   bubble,
+  streakBadge,
+  note,
 }: {
   habit: HabitWithSchedules;
   value: number;
   completed: boolean;
   pending: boolean;
-  onAdd: (delta: number) => void;
+  onChange: (next: number) => void;
   color: string;
   bubble: React.ReactNode;
+  streakBadge: React.ReactNode;
+  note: React.ReactNode;
 }) {
   const target = habit.target_value ?? 0;
   const unit = habit.target_unit ?? "";
@@ -188,7 +286,12 @@ function ProgressHabitRow({
     >
       <div className="flex items-center gap-3">
         <CheckCircle done={completed} color={color} />
-        <span className="min-w-0 flex-1 truncate font-medium">{habit.name}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium">{habit.name}</span>
+          {streakBadge ? (
+            <span className="mt-0.5 block text-xs text-muted-foreground">{streakBadge}</span>
+          ) : null}
+        </span>
         <span className="text-sm font-medium tabular-nums text-muted-foreground">
           {value}
           {target ? `/${target}` : ""} {unit}
@@ -214,7 +317,7 @@ function ProgressHabitRow({
             key={inc}
             type="button"
             disabled={pending}
-            onClick={() => onAdd(inc)}
+            onClick={() => onChange(value + inc)}
             className="flex min-h-10 items-center gap-1 rounded-full border border-input bg-card px-3.5 text-sm font-medium transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
           >
             <Plus className="size-3.5" />
@@ -222,17 +325,20 @@ function ProgressHabitRow({
             {unit}
           </button>
         ))}
-        {value > 0 ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => onAdd(-(increments[0] ?? 1))}
-            className="ml-auto flex size-10 items-center justify-center rounded-full border border-input bg-card text-muted-foreground transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
-            aria-label={`Remover ${increments[0]} ${unit}`}
-          >
-            <Minus className="size-4" />
-          </button>
-        ) : null}
+        <span className="ml-auto flex items-center gap-1">
+          {value > 0 ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => onChange(Math.max(0, value - (increments[0] ?? 1)))}
+              className="flex size-10 items-center justify-center rounded-full border border-input bg-card text-muted-foreground transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
+              aria-label={`Remover ${increments[0]} ${unit}`}
+            >
+              <Minus className="size-4" />
+            </button>
+          ) : null}
+          {note}
+        </span>
       </div>
     </div>
   );

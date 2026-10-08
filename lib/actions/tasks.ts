@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { taskSchema, type TaskInput } from "@/lib/validation/task";
 
@@ -44,26 +45,18 @@ export async function updateTask(taskId: string, input: TaskInput) {
   revalidatePath("/", "layout");
 }
 
-export async function toggleTaskCompletion(taskId: string) {
+/** Estado desejado (não "alternar"): desfazer e repetir a chamada são seguros. */
+export async function setTaskCompletion(taskId: string, completed: boolean) {
   const { supabase } = await requireUser();
-
-  const { data: existing, error: fetchError } = await supabase
-    .from("tasks")
-    .select("completed")
-    .eq("id", taskId)
-    .single();
-
-  if (fetchError) throw new Error(fetchError.message);
-
-  const nextCompleted = !existing.completed;
+  const id = z.uuid().parse(taskId);
 
   const { error } = await supabase
     .from("tasks")
     .update({
-      completed: nextCompleted,
-      completed_at: nextCompleted ? new Date().toISOString() : null,
+      completed,
+      completed_at: completed ? new Date().toISOString() : null,
     })
-    .eq("id", taskId);
+    .eq("id", id);
 
   if (error) throw new Error(error.message);
 

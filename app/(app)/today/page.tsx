@@ -1,14 +1,17 @@
-import { AlarmClock, ListChecks, Repeat } from "lucide-react";
+import { AlarmClock, Flame, ListChecks, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateProfile } from "@/lib/data/profile";
 import { getHabitsWithSchedules } from "@/lib/data/habits";
 import { getPillars } from "@/lib/data/pillars";
 import { getLogsForRange } from "@/lib/data/logs";
+import { QUICK_STREAK_WINDOW_DAYS, streaksFromLogs, windowStart } from "@/lib/data/streaks";
 import { getOverdueTasks, getTasksForDate } from "@/lib/data/tasks";
 import { todayISO, formatDisplayDate, currentHour, weekRangeOf } from "@/lib/dates";
 import { activeScheduleOn, isQuotaOn, isScheduledOn } from "@/lib/scheduling";
 import { completionsIn, dailyScore } from "@/lib/scoring";
+import { routineStreak } from "@/lib/progress/routine";
+import { formatStreak } from "@/lib/gamification";
 import { HabitListItem } from "@/components/habits/HabitListItem";
 import { TaskListItem } from "@/components/tasks/TaskListItem";
 import { EmptyState } from "@/components/layout/EmptyState";
@@ -24,7 +27,8 @@ export default async function TodayPage() {
 
   const [habits, weekLogs, tasks, overdue, pillars] = await Promise.all([
     getHabitsWithSchedules(supabase),
-    getLogsForRange(supabase, week.start, week.end),
+    // Uma leitura de 90 dias serve à semana, ao dia e aos selos de sequência.
+    getLogsForRange(supabase, windowStart(today, QUICK_STREAK_WINDOW_DAYS), today),
     getTasksForDate(supabase, today),
     getOverdueTasks(supabase, today),
     getPillars(supabase, { includeArchived: true }),
@@ -32,6 +36,7 @@ export default async function TodayPage() {
   const pillarById = new Map(pillars.map((p) => [p.id, p]));
 
   const todayHabits = habits.filter((h) => isScheduledOn(h.habit_schedules, today));
+  const streaks = streaksFromLogs(todayHabits, weekLogs, today, QUICK_STREAK_WINDOW_DAYS);
 
   const logsToday = new Map<string, HabitLog>();
   for (const habit of habits) {
@@ -40,6 +45,7 @@ export default async function TodayPage() {
   }
 
   const score = dailyScore(habits, logsToday, today);
+  const routine = routineStreak(habits, weekLogs, today, QUICK_STREAK_WINDOW_DAYS);
   const tasksDone = tasks.filter((t) => t.completed).length;
 
   const greeting = getGreeting(profile.timezone);
@@ -65,6 +71,15 @@ export default async function TodayPage() {
               : `Você concluiu ${score.completed} de ${score.scheduled} hábitos`
           }
         />
+
+        {routine.current >= 2 ? (
+          <p className="flex items-center gap-2 px-1 text-sm font-medium">
+            <Flame className="size-4 text-warning" aria-hidden />
+            Rotina em dia há {formatStreak(routine.current, "days")}
+            {routine.current >= QUICK_STREAK_WINDOW_DAYS ? "+" : ""}
+            <span className="font-normal text-muted-foreground">(80% ou mais)</span>
+          </p>
+        ) : null}
       </header>
 
       {overdue.length > 0 ? (
@@ -108,6 +123,7 @@ export default async function TodayPage() {
                   index={i}
                   log={logsToday.get(habit.id)}
                   dateISO={today}
+                  streak={streaks.get(habit.id)}
                   weekProgress={
                     target
                       ? {

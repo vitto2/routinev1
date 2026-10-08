@@ -1,4 +1,5 @@
-import { CalendarRange } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, CalendarRange, ClipboardList } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateProfile } from "@/lib/data/profile";
@@ -42,10 +43,10 @@ export default async function WeekPage() {
         <h1 className="text-2xl font-bold tracking-tight">Sua semana</h1>
       </header>
 
-      <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-end justify-between">
-          <p className="text-sm text-muted-foreground">Consistência da semana</p>
-          <p className="text-2xl font-semibold tabular-nums">
+          <p className="text-sm font-medium text-muted-foreground">Consistência da semana</p>
+          <p className="text-3xl font-bold tabular-nums">
             {currentScore.percent !== null ? `${Math.round(currentScore.percent * 100)}%` : "—"}
           </p>
         </div>
@@ -54,6 +55,23 @@ export default async function WeekPage() {
             Semana anterior: {Math.round(previousScore.percent * 100)}%
           </p>
         ) : null}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          href="/review"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-input bg-card px-3 text-sm font-medium transition-colors hover:bg-accent"
+        >
+          <ClipboardList className="size-4 text-primary" aria-hidden />
+          Revisão
+        </Link>
+        <Link
+          href="/progress/calendar"
+          className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-input bg-card px-3 text-sm font-medium transition-colors hover:bg-accent"
+        >
+          <CalendarDays className="size-4 text-primary" aria-hidden />
+          Calendário
+        </Link>
       </div>
 
       {visibleHabits.length === 0 ? (

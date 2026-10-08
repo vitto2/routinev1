@@ -1,4 +1,4 @@
-import { WEEKDAY_NAMES, formatDisplayDate } from "@/lib/dates";
+import { WEEKDAY_NAMES, WEEKDAY_PLURAL, formatDisplayDate } from "@/lib/dates";
 import type { HabitSchedule } from "@/types/domain";
 
 export interface ScheduleLike {
@@ -9,15 +9,6 @@ export interface ScheduleLike {
   specific_date?: string | null;
 }
 
-const PLURAL: Record<number, string> = {
-  0: "domingos",
-  1: "segundas",
-  2: "terças",
-  3: "quartas",
-  4: "quintas",
-  5: "sextas",
-  6: "sábados",
-};
 
 function listPt(items: string[]) {
   if (items.length <= 1) return items.join("");
@@ -43,7 +34,7 @@ export function describeSchedule(schedule: ScheduleLike | null | undefined): str
       );
       // Segunda primeiro, domingo por último
       const ordered = [...days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
-      return `${listPt(ordered.map((d) => PLURAL[d]))}`.replace(/^./, (c) => c.toUpperCase());
+      return `${listPt(ordered.map((d) => WEEKDAY_PLURAL[d]))}`.replace(/^./, (c) => c.toUpperCase());
     }
     case "x_per_week": {
       const n = schedule.frequency_target ?? 0;

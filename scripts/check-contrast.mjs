@@ -106,6 +106,18 @@ for (const [theme, selector] of [["CLARO", ":root"], ["ESCURO", ".dark"]]) {
   check("texto sobre success/10% (item concluído)", t.foreground, over(t.success, t.card, 0.1), 4.5);
   check("texto secundário sobre success/10%", t["muted-foreground"], over(t.success, t.card, 0.1), 4.5);
 
+  // Calendário mensal: número e % em texto normal sobre o tom do dia; ícone (UI 3:1) na cor do nível.
+  for (const name of ["success", "warning", "destructive"]) {
+    const tint = over(t[name], t.card, 0.12);
+    check(`calendário ${name}: texto sobre tom 12%`, t.foreground, tint, 4.5);
+    check(`calendário ${name}: texto secundário sobre tom 12%`, t["muted-foreground"], tint, 4.5);
+    check(`calendário ${name}: ícone sobre tom 12% (UI 3:1)`, t[name], tint, 3);
+  }
+  // Barras dos gráficos: preenchida e contorno do período em andamento sobre o card.
+  check("gráfico: barra primary / card (UI 3:1)", t.primary, t.card, 3);
+  check("gráfico: contorno primary / card (UI 3:1)", t.primary, t.card, 3);
+  check("gráfico: texto do rótulo / card", t["muted-foreground"], t.card, 4.5);
+
   // cor de pilar: ícone/título = mistura com o texto; fundo = cor a 13% sobre o card
   for (const hex of PALETTE) {
     const base = hexToLinear(hex);
