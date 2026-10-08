@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown } from "lucide-react";
@@ -19,9 +20,11 @@ import { Segmented } from "@/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WeekdayPicker } from "@/components/habits/WeekdayPicker";
 import { IconPicker, ColorPicker } from "@/components/pillars/IconColorPicker";
-import type { HabitWithSchedules, Pillar } from "@/types/domain";
+import type { HabitWithSchedules, Pillar, Routine } from "@/types/domain";
 
 const NO_PILLAR = "none";
+const NO_ROUTINE = "none";
+const CHALLENGE_OPTIONS = [21, 30, 66, 90];
 
 type ScheduleType = ScheduleInput["schedule_type"];
 type Tracking = "checkbox" | "quantity" | "time";
@@ -72,10 +75,18 @@ export function HabitForm({
   habit,
   pillars,
   today,
+  frequencyLocked = false,
+  schemaV2 = false,
+  routines = [],
 }: {
   habit?: HabitWithSchedules;
   pillars: Pillar[];
   today: string;
+  /** migration 0004 aplicada: libera lembrete, rotina e desafio */
+  schemaV2?: boolean;
+  routines?: Routine[];
+  /** hábito pausado por tempo indeterminado: a frequência só muda depois de retomar */
+  frequencyLocked?: boolean;
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -89,6 +100,10 @@ export function HabitForm({
   const [target, setTarget] = useState(habit?.target_value?.toString() ?? "");
   const [icon, setIcon] = useState<string | null>(habit?.icon ?? null);
   const [color, setColor] = useState<string | null>(habit?.color ?? null);
+  const [reminderTime, setReminderTime] = useState(habit?.reminder_time?.slice(0, 5) ?? "");
+  const [routineId, setRoutineId] = useState(habit?.routine_id ?? NO_ROUTINE);
+  const [challengeDays, setChallengeDays] = useState<number | null>(habit?.challenge_days ?? null);
+  const [challengeStart, setChallengeStart] = useState(habit?.challenge_start_date ?? today);
 
   const [scheduleType, setScheduleType] = useState<ScheduleType>(current?.schedule_type ?? "daily");
   const [weekdays, setWeekdays] = useState<number[]>(current?.weekdays ?? [1, 2, 3, 4, 5]);
@@ -128,12 +143,25 @@ export function HabitForm({
     icon,
     color,
     schedule,
+    ...(schemaV2
+      ? {
+          reminder_time: reminderTime || null,
+          routine_id: routineId === NO_ROUTINE ? null : routineId,
+          challenge_days: challengeDays,
+          challenge_start_date: challengeDays ? challengeStart || today : null,
+        }
+      : {}),
   };
 
   const pillar = pillars.find((p) => p.id === pillarId);
   const accent = accentStyles(color ?? pillar?.color);
   const iconName = icon ?? pillar?.icon ?? null;
   const PreviewIcon = (iconName && ICONS_BY_NAME[iconName]) || null;
+
+  const routineItems = [
+    { value: NO_ROUTINE, label: "Sem rotina" },
+    ...routines.map((r) => ({ value: r.id, label: r.name })),
+  ];
 
   const pillarItems = [
     { value: NO_PILLAR, label: "Sem pilar" },
@@ -298,7 +326,13 @@ export function HabitForm({
         </Field>
       ) : null}
 
-      <div className="space-y-3">
+      <div className={cn("space-y-3", frequencyLocked && "opacity-60")}>
+        {frequencyLocked ? (
+          <p role="note" className="rounded-xl bg-warning/10 px-3 py-2 text-sm">
+            Este hábito está em pausa por tempo indeterminado. Retome-o para alterar a frequência.
+          </p>
+        ) : null}
+        <fieldset disabled={frequencyLocked} className="space-y-3 border-0 p-0">
         <Field id="habit-schedule" label="Frequência" required>
           {(props) => (
             <Select
@@ -433,7 +467,67 @@ export function HabitForm({
           <span className="font-medium text-foreground">Resumo: </span>
           {summary}
         </p>
+        </fieldset>
       </div>
+
+      {schemaV2 ? (
+        <Field
+          id="habit-reminder"
+          label="Lembrete"
+          optionalHint
+          error={errors.reminder_time}
+          hint="Avisamos nesse horário se o hábito ainda não foi feito (ative as notificações no Perfil)."
+        >
+          {(props) => (
+            <div className="flex items-center gap-2">
+              <Input
+                {...props}
+                type="time"
+                value={reminderTime}
+                onChange={(e) => {
+                  setReminderTime(e.target.value);
+                  clear("reminder_time");
+                }}
+              />
+              {reminderTime ? (
+                <Button type="button" variant="ghost" onClick={() => setReminderTime("")}>
+                  Limpar
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </Field>
+      ) : null}
+
+      {schemaV2 && routines.length > 0 ? (
+        <Field id="habit-routine" label="Rotina" optionalHint>
+          {(props) => (
+            <Select
+              items={routineItems}
+              value={routineId}
+              onValueChange={(v) => setRoutineId(v ?? NO_ROUTINE)}
+            >
+              <SelectTrigger id={props.id}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {routineItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </Field>
+      ) : schemaV2 ? (
+        <p className="text-sm text-muted-foreground">
+          Quer agrupar hábitos em blocos como manhã e noite?{" "}
+          <Link href="/routines" className="font-medium text-primary underline underline-offset-4">
+            Criar rotinas
+          </Link>
+        </p>
+      ) : null}
 
       <Field id="habit-pillar" label="Pilar" optionalHint>
         {(props) => (
@@ -489,6 +583,50 @@ export function HabitForm({
             </div>
             <ColorPicker value={color} onChange={setColor} />
           </div>
+          {schemaV2 ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Desafio</p>
+              <p className="text-xs text-muted-foreground">
+                Um período fechado para criar o hábito, com contagem de dias e resumo no fim.
+              </p>
+              <div role="group" aria-label="Duração do desafio" className="flex flex-wrap gap-2">
+                <Chip active={challengeDays === null} onClick={() => setChallengeDays(null)}>
+                  Sem desafio
+                </Chip>
+                {CHALLENGE_OPTIONS.map((n) => (
+                  <Chip
+                    key={n}
+                    active={challengeDays === n}
+                    onClick={() => {
+                      setChallengeDays(n);
+                      clear("challenge_days");
+                    }}
+                  >
+                    {n} dias
+                  </Chip>
+                ))}
+              </div>
+              {challengeDays ? (
+                <Field
+                  id="habit-challenge-start"
+                  label="Começa em"
+                  error={errors.challenge_start_date}
+                >
+                  {(props) => (
+                    <Input
+                      {...props}
+                      type="date"
+                      value={challengeStart}
+                      onChange={(e) => {
+                        setChallengeStart(e.target.value);
+                        clear("challenge_start_date");
+                      }}
+                    />
+                  )}
+                </Field>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </details>
 

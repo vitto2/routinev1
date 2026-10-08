@@ -28,7 +28,9 @@ import {
 } from "@/lib/progress/period";
 import { monthlySeries, seriesTrend, weeklySeries, type SeriesPoint } from "@/lib/progress/series";
 import { routineStreak } from "@/lib/progress/routine";
+import { challengeOf } from "@/lib/challenges";
 import { BarChart } from "@/components/progress/BarChart";
+import { ChallengeCard } from "@/components/progress/ChallengeCard";
 import { DayStripLegend } from "@/components/progress/DayStrip";
 import { HabitPeriodCard } from "@/components/progress/HabitPeriodCard";
 import { PeriodSummary } from "@/components/progress/PeriodSummary";
@@ -87,6 +89,15 @@ export default async function ProgressPage({
   const habitStats = habits
     .map((habit) => habitPeriodStats(habit, logs, days, today))
     .filter((s) => s.score.scheduled > 0 || s.timesDone > 0);
+
+  const challenges = activeHabits
+    .map((habit) => ({ habit, info: challengeOf(habit, logs, today) }))
+    .filter((c): c is { habit: (typeof activeHabits)[number]; info: NonNullable<typeof c.info> } => c.info !== null)
+    .sort((a, b) => {
+      // em andamento primeiro, depois os que ainda vão começar, por fim os encerrados
+      const order = { active: 0, upcoming: 1, finished: 2 } as const;
+      return order[a.info.status] - order[b.info.status];
+    });
 
   const weekdays = weekdayPattern(habits, logs, days, today);
   const { best, worst } = bestAndWorstWeekday(weekdays, 3);
@@ -151,6 +162,22 @@ export default async function ProgressPage({
         perWeek={Math.round((score.completed / (period / 7)) * 10) / 10}
         tasksDone={taskSummary.completed}
       />
+
+      {challenges.length > 0 ? (
+        <section className="space-y-3" aria-labelledby="challenges-heading">
+          <h2
+            id="challenges-heading"
+            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+          >
+            Desafios
+          </h2>
+          <div className="space-y-3">
+            {challenges.map(({ habit, info }, i) => (
+              <ChallengeCard key={habit.id} habitId={habit.id} name={habit.name} info={info} index={i} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="space-y-3" aria-labelledby="habits-heading">
         <div className="space-y-2">

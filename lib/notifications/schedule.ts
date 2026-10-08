@@ -47,3 +47,12 @@ export function isTaskReminderDue(
 export function plural(n: number, singular: string, pluralForm: string) {
   return `${n} ${n === 1 ? singular : pluralForm}`;
 }
+
+/** Por quanto tempo depois do horário do hábito o lembrete ainda vale (cron atrasado, app fora do ar). */
+export const HABIT_REMINDER_GRACE_MINUTES = 60;
+
+/** O horário de lembrete do hábito chegou (e ainda não passou da tolerância)? */
+export function isHabitReminderDue(reminderTime: string, moment: LocalMoment): boolean {
+  const at = timeToMinutes(reminderTime);
+  return moment.minutes >= at && moment.minutes < at + HABIT_REMINDER_GRACE_MINUTES;
+}

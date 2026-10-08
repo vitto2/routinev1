@@ -1,12 +1,13 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPush, type PushPayload, type StoredSubscription } from "@/lib/push";
-import { isScheduledOn } from "@/lib/scheduling";
-import { addDaysISO } from "@/lib/dates";
+import { activeScheduleOn, isQuotaOn, isScheduledOn } from "@/lib/scheduling";
+import { addDaysISO, weekRangeOf, weekdayOf } from "@/lib/dates";
 import {
   DIGEST_HOURS,
   EVENING_HOURS,
   inWindow,
+  isHabitReminderDue,
   isTaskReminderDue,
   localMoment,
   plural,
@@ -18,7 +19,18 @@ export interface ReminderSummary {
   digests: number;
   evenings: number;
   taskReminders: number;
+  habitReminders: number;
+  reviews: number;
   removedSubscriptions: number;
+}
+
+interface ReminderHabit {
+  id: string;
+  user_id: string;
+  name: string;
+  reminder_time: string;
+  last_reminded_date: string | null;
+  habit_schedules: HabitSchedule[];
 }
 
 /**
@@ -26,7 +38,10 @@ export interface ReminderSummary {
  * Para cada usuário com dispositivo inscrito, no fuso dele:
  *  - resumo da manhã (1x/dia, a partir das 09h);
  *  - lembrete da noite se ainda houver tarefas pendentes (1x/dia, a partir das 18h);
- *  - aviso de tarefa com horário (15 min antes), 1x por tarefa.
+ *  - aviso de tarefa com horário (15 min antes), 1x por tarefa;
+ *  - lembrete por hábito no horário escolhido (1x/dia, só se ainda não foi feito);
+ *  - convite para a revisão semanal no domingo à noite (1x por semana).
+ * Recursos da migration 0004 são opcionais: se as colunas não existem, são ignorados.
  */
 export async function runReminders(now = new Date()): Promise<ReminderSummary> {
   const db = createAdminClient();
@@ -35,6 +50,8 @@ export async function runReminders(now = new Date()): Promise<ReminderSummary> {
     digests: 0,
     evenings: 0,
     taskReminders: 0,
+    habitReminders: 0,
+    reviews: 0,
     removedSubscriptions: 0,
   };
 
@@ -71,6 +88,25 @@ export async function runReminders(now = new Date()): Promise<ReminderSummary> {
     .gte("due_date", windowStart)
     .lte("due_date", windowEnd);
 
+  // --- recursos da migration 0004 (tolerantes à ausência das colunas) ---
+  const { data: reminderRows, error: reminderError } = await db
+    .from("habits")
+    .select("id, user_id, name, reminder_time, last_reminded_date, habit_schedules(*)")
+    .in("user_id", userIds)
+    .eq("active", true)
+    .not("reminder_time", "is", null);
+  const habitReminders = reminderError
+    ? []
+    : ((reminderRows ?? []) as unknown as ReminderHabit[]);
+
+  const { data: reviewRows, error: reviewError } = await db
+    .from("profiles")
+    .select("id, last_review_date")
+    .in("id", userIds);
+  const reviewDates = new Map<string, string | null>(
+    reviewError ? [] : (reviewRows ?? []).map((r) => [r.id, r.last_review_date]),
+  );
+
   async function deliver(userId: string, payload: PushPayload) {
     let delivered = false;
     for (const sub of subsByUser.get(userId) ?? []) {
@@ -101,6 +137,85 @@ export async function runReminders(now = new Date()): Promise<ReminderSummary> {
       // Marca mesmo sem entrega bem-sucedida para não repetir a cada execução.
       await db.from("tasks").update({ reminded_at: now.toISOString() }).eq("id", task.id);
       if (delivered) summary.taskReminders += 1;
+    }
+
+    // Lembretes por hábito
+    const dueHabits = habitReminders.filter(
+      (h) =>
+        h.user_id === profile.id &&
+        h.last_reminded_date !== moment.date &&
+        isHabitReminderDue(h.reminder_time, moment) &&
+        isScheduledOn(h.habit_schedules, moment.date),
+    );
+
+    if (dueHabits.length > 0) {
+      const ids = dueHabits.map((h) => h.id);
+      const week = weekRangeOf(moment.date);
+
+      const { data: doneToday } = await db
+        .from("habit_logs")
+        .select("habit_id")
+        .in("habit_id", ids)
+        .eq("log_date", moment.date)
+        .eq("completed", true);
+      const doneSet = new Set((doneToday ?? []).map((l) => l.habit_id));
+
+      const { data: doneWeek } = await db
+        .from("habit_logs")
+        .select("habit_id")
+        .in("habit_id", ids)
+        .gte("log_date", week.start)
+        .lte("log_date", moment.date)
+        .eq("completed", true);
+      const weekCount = new Map<string, number>();
+      for (const log of doneWeek ?? []) {
+        weekCount.set(log.habit_id, (weekCount.get(log.habit_id) ?? 0) + 1);
+      }
+
+      for (const habit of dueHabits) {
+        const quotaTarget = isQuotaOn(habit.habit_schedules, moment.date)
+          ? (activeScheduleOn(habit.habit_schedules, moment.date)?.frequency_target ?? 0)
+          : 0;
+        const alreadyDone =
+          doneSet.has(habit.id) || (quotaTarget > 0 && (weekCount.get(habit.id) ?? 0) >= quotaTarget);
+
+        if (!alreadyDone) {
+          const delivered = await deliver(profile.id, {
+            title: `Hora de: ${habit.name}`,
+            body: "Toque para abrir e marcar como feito.",
+            url: "/today",
+            tag: `habit-${habit.id}`,
+          });
+          if (delivered) summary.habitReminders += 1;
+        }
+        // Marca em qualquer caso: evita reavaliar a cada execução do cron dentro da janela.
+        await db.from("habits").update({ last_reminded_date: moment.date }).eq("id", habit.id);
+      }
+    }
+
+    // Revisão semanal: domingo à noite, uma vez por semana
+    if (
+      reviewDates.has(profile.id) &&
+      weekdayOf(moment.date) === 0 &&
+      inWindow(moment.hour, EVENING_HOURS) &&
+      reviewDates.get(profile.id) !== moment.date
+    ) {
+      const { count } = await db
+        .from("habits")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", profile.id)
+        .eq("active", true);
+
+      if ((count ?? 0) > 0) {
+        const delivered = await deliver(profile.id, {
+          title: "Sua semana está pronta",
+          body: "Veja como foi e o que vale ajustar na próxima.",
+          url: "/review",
+          tag: "routine-review",
+        });
+        if (delivered) summary.reviews += 1;
+      }
+      await db.from("profiles").update({ last_review_date: moment.date }).eq("id", profile.id);
     }
 
     const wantsDigest =

@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { Check, Minus, NotebookPen, Plus } from "lucide-react";
+import { Check, Minus, NotebookPen, Plus, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +28,20 @@ const QUICK_INCREMENTS: Record<string, number[]> = {
 const TOAST_ID = "habit-feedback";
 
 type LogState = { completed: boolean; value: number };
+
+export interface ChallengeView {
+  day: number;
+  total: number;
+}
+
+function ChallengeBadge({ day, total }: ChallengeView) {
+  return (
+    <span className="inline-flex items-center gap-1 font-medium text-foreground">
+      <Trophy className="size-3.5 text-primary" aria-hidden />
+      Desafio: dia {day}/{total}
+    </span>
+  );
+}
 
 export interface StreakView {
   current: number;
@@ -80,6 +94,7 @@ export function HabitListItem({
   color,
   iconName,
   streak,
+  challenge,
 }: {
   habit: HabitWithSchedules;
   log: HabitLog | undefined;
@@ -90,6 +105,8 @@ export function HabitListItem({
   color?: string | null;
   iconName?: string | null;
   streak?: StreakView;
+  /** desafio em andamento (dia atual / total) */
+  challenge?: ChallengeView;
 }) {
   const [pending, startTransition] = useTransition();
   const [state, setOptimistic] = useOptimistic<LogState, LogState>(
@@ -177,9 +194,11 @@ export function HabitListItem({
     />
   );
 
-  const streakBadge = streak ? (
-    <StreakBadge current={streak.current} unit={streak.unit} capped={streak.capped} />
-  ) : null;
+  const extras: React.ReactNode[] = [];
+  if (streak && streak.current > 0) {
+    extras.push(<StreakBadge current={streak.current} unit={streak.unit} capped={streak.capped} />);
+  }
+  if (challenge) extras.push(<ChallengeBadge day={challenge.day} total={challenge.total} />);
 
   if (habit.tracking_type === "quantity" || habit.tracking_type === "time") {
     return (
@@ -192,7 +211,7 @@ export function HabitListItem({
           onChange={(next) => commitValue(next, state.value, true)}
           color={accentColor}
           bubble={bubble}
-          streakBadge={streakBadge}
+          extras={extras}
           note={
             <NoteButton hasNote={Boolean(note)} onClick={() => setNoteOpen(true)} />
           }
@@ -209,7 +228,7 @@ export function HabitListItem({
   } else if (weekProgress) {
     subtitleParts.push(`${weekProgress.done}/${weekProgress.target} nesta semana`);
   }
-  if (streakBadge) subtitleParts.push(streakBadge);
+  subtitleParts.push(...extras);
 
   return (
     <div style={delay} className="animate-rise flex items-center gap-1.5">
@@ -257,7 +276,7 @@ function ProgressHabitRow({
   onChange,
   color,
   bubble,
-  streakBadge,
+  extras,
   note,
 }: {
   habit: HabitWithSchedules;
@@ -267,7 +286,7 @@ function ProgressHabitRow({
   onChange: (next: number) => void;
   color: string;
   bubble: React.ReactNode;
-  streakBadge: React.ReactNode;
+  extras: React.ReactNode[];
   note: React.ReactNode;
 }) {
   const target = habit.target_value ?? 0;
@@ -288,8 +307,12 @@ function ProgressHabitRow({
         <CheckCircle done={completed} color={color} />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{habit.name}</span>
-          {streakBadge ? (
-            <span className="mt-0.5 block text-xs text-muted-foreground">{streakBadge}</span>
+          {extras.length > 0 ? (
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              {extras.map((extra, i) => (
+                <span key={i}>{extra}</span>
+              ))}
+            </span>
           ) : null}
         </span>
         <span className="text-sm font-medium tabular-nums text-muted-foreground">

@@ -11,6 +11,7 @@ export type ScheduleType =
   | "specific_date"
   | "interval";
 export type TaskPriority = "low" | "medium" | "high";
+export type RoutinePeriod = "morning" | "afternoon" | "evening" | "custom";
 
 export interface Database {
   public: {
@@ -24,6 +25,7 @@ export interface Database {
           onboarded_at: string | null;
           last_digest_date: string | null;
           last_evening_date: string | null;
+          last_review_date: string | null;
         };
         Insert: {
           id: string;
@@ -33,6 +35,7 @@ export interface Database {
           onboarded_at?: string | null;
           last_digest_date?: string | null;
           last_evening_date?: string | null;
+          last_review_date?: string | null;
         };
         Update: {
           id?: string;
@@ -42,6 +45,7 @@ export interface Database {
           onboarded_at?: string | null;
           last_digest_date?: string | null;
           last_evening_date?: string | null;
+          last_review_date?: string | null;
         };
         Relationships: [];
       };
@@ -87,6 +91,11 @@ export interface Database {
           active: boolean;
           archived_at: string | null;
           sort_order: number;
+          reminder_time: string | null;
+          last_reminded_date: string | null;
+          challenge_days: number | null;
+          challenge_start_date: string | null;
+          routine_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -105,6 +114,11 @@ export interface Database {
           active?: boolean;
           archived_at?: string | null;
           sort_order?: number;
+          reminder_time?: string | null;
+          last_reminded_date?: string | null;
+          challenge_days?: number | null;
+          challenge_start_date?: string | null;
+          routine_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -199,6 +213,26 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]>;
+        Relationships: [];
+      };
+      routines: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          period: RoutinePeriod;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          period?: RoutinePeriod;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["routines"]["Insert"]>;
         Relationships: [];
       };
       push_subscriptions: {

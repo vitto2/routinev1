@@ -81,9 +81,11 @@ export async function createHabit(input: HabitInput) {
   const profile = await getOrCreateProfile(supabase, user.id);
   const today = todayISO(profile.timezone);
 
+  await assertOwnRoutine(supabase, data.routine_id);
+
   const { data: habit, error } = await supabase
     .from("habits")
-    .insert(habitRow(data, user.id))
+    .insert(habitRow(data, user.id, today))
     .select("id")
     .single();
 
@@ -100,8 +102,12 @@ export async function createHabit(input: HabitInput) {
   revalidatePath("/", "layout");
 }
 
-/** Hábitos de evitação são sempre checkbox; unidade deriva do tipo de medição. */
-function habitRow(data: HabitInput, userId: string) {
+/**
+ * Linha do hábito a gravar. Hábitos de evitação são sempre checkbox; a unidade
+ * deriva do tipo de medição. Colunas da migration 0004 só entram quando o
+ * cliente as enviou, para não quebrar o cadastro antes da migration.
+ */
+function habitRow(data: HabitInput, userId: string, today: string) {
   const trackingType = data.habit_type === "avoid" ? "checkbox" : data.tracking_type;
   const measured = trackingType === "quantity" || trackingType === "time";
 
@@ -116,7 +122,27 @@ function habitRow(data: HabitInput, userId: string) {
     target_unit: measured ? (trackingType === "time" ? "min" : "ml") : null,
     icon: data.icon ?? null,
     color: data.color ?? null,
+    ...(data.reminder_time !== undefined ? { reminder_time: data.reminder_time } : {}),
+    ...(data.routine_id !== undefined ? { routine_id: data.routine_id } : {}),
+    ...(data.challenge_days !== undefined
+      ? {
+          challenge_days: data.challenge_days,
+          challenge_start_date: data.challenge_days ? (data.challenge_start_date ?? today) : null,
+        }
+      : {}),
   };
+}
+
+/** A rotina escolhida precisa ser do próprio usuário (a RLS esconde as dos outros). */
+async function assertOwnRoutine(supabase: Supabase, routineId: string | null | undefined) {
+  if (!routineId) return;
+  const { data, error } = await supabase
+    .from("routines")
+    .select("id")
+    .eq("id", routineId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("Rotina não encontrada.");
 }
 
 export async function updateHabit(habitId: string, input: HabitInput) {
@@ -125,7 +151,9 @@ export async function updateHabit(habitId: string, input: HabitInput) {
   const profile = await getOrCreateProfile(supabase, user.id);
   const today = todayISO(profile.timezone);
 
-  const { user_id: _userId, ...fields } = habitRow(data, user.id);
+  await assertOwnRoutine(supabase, data.routine_id);
+
+  const { user_id: _userId, ...fields } = habitRow(data, user.id, today);
   void _userId;
 
   const { data: updated, error } = await supabase
@@ -143,10 +171,20 @@ export async function updateHabit(habitId: string, input: HabitInput) {
     const current = await getCurrentSchedule(supabase, habitId);
 
     if (!current) {
-      const { error: insertError } = await supabase
+      // Sem agenda aberta mas com histórico = pausado por tempo indeterminado:
+      // criar uma agenda agora encerraria a pausa sem o usuário pedir.
+      const { count, error: countError } = await supabase
         .from("habit_schedules")
-        .insert({ habit_id: habitId, start_date: today, ...next });
-      if (insertError) throw new Error(insertError.message);
+        .select("id", { count: "exact", head: true })
+        .eq("habit_id", habitId);
+      if (countError) throw new Error(countError.message);
+
+      if ((count ?? 0) === 0) {
+        const { error: insertError } = await supabase
+          .from("habit_schedules")
+          .insert({ habit_id: habitId, start_date: today, ...next });
+        if (insertError) throw new Error(insertError.message);
+      }
     } else if (!sameSchedule(current, next)) {
       if (current.start_date >= today) {
         // Mesma data de início: edita no lugar (não existe histórico a preservar).

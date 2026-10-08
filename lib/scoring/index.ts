@@ -1,4 +1,4 @@
-import { addDaysISO, compareISO, diffInDays, weekRangeOf } from "@/lib/dates";
+import { addDaysISO, compareISO, weekRangeOf } from "@/lib/dates";
 import {
   activeScheduleOn,
   habitStartDate,
@@ -84,21 +84,22 @@ function quotaWeek(
   weekEnd: string,
   todayISODate: string,
 ): { scheduled: number; completed: number } {
-  const lastDay = weekDays[weekDays.length - 1];
-  const target = activeScheduleOn(habit.habit_schedules, lastDay)?.frequency_target;
-  if (!target) return { scheduled: 0, completed: 0 };
+  // Só contam dias em que a cota está vigente: o início do hábito e as pausas
+  // (lacunas nas agendas) reduzem a meta possível da semana.
+  const quotaDays = (days: string[]) =>
+    days.filter((d) => isQuotaOn(habit.habit_schedules, d));
 
-  const start = habitStartDate(habit.habit_schedules);
-  const eligibleDays = weekDays.filter((d) => start && compareISO(start, d) <= 0);
+  const eligibleDays = quotaDays(weekDays);
   if (eligibleDays.length === 0) return { scheduled: 0, completed: 0 };
 
+  const lastEligible = eligibleDays[eligibleDays.length - 1];
+  const target = activeScheduleOn(habit.habit_schedules, lastEligible)?.frequency_target;
+  if (!target) return { scheduled: 0, completed: 0 };
+
   const weekEnded = compareISO(weekEnd, todayISODate) < 0;
+  const wholeWeek = Array.from({ length: 7 }, (_, i) => addDaysISO(addDaysISO(weekEnd, -6), i));
   // Semana em andamento: a meta considera a semana inteira, não só os dias já vividos.
-  const potentialDays = weekEnded
-    ? eligibleDays
-    : Array.from({ length: 7 }, (_, i) => addDaysISO(addDaysISO(weekEnd, -6), i)).filter(
-        (d) => start && compareISO(start, d) <= 0,
-      );
+  const potentialDays = weekEnded ? eligibleDays : quotaDays(wholeWeek);
   const goal = Math.min(target, potentialDays.length);
   const done = Math.min(completionsIn(habit.id, logs, eligibleDays), goal);
 
@@ -106,7 +107,9 @@ function quotaWeek(
 
   // Dias que ainda dá para cumprir: os que restam depois de hoje + hoje (se não feito).
   const doneToday = logs.get(`${habit.id}:${todayISODate}`)?.completed ?? false;
-  const canStillDo = diffInDays(weekEnd, todayISODate) + (doneToday ? 0 : 1);
+  const daysAfterToday = quotaDays(wholeWeek).filter((d) => compareISO(d, todayISODate) > 0).length;
+  const todayAvailable = isQuotaOn(habit.habit_schedules, todayISODate) && !doneToday ? 1 : 0;
+  const canStillDo = daysAfterToday + todayAvailable;
 
   const need = goal - done;
   if (need <= canStillDo) return { scheduled: done, completed: done };
@@ -150,7 +153,7 @@ export function scoreForDays(
     for (const [weekStart, weekDays] of weeks) {
       const weekEnd = addDaysISO(weekStart, 6);
       for (const habit of quotaHabits) {
-        if (!isQuotaOn(habit.habit_schedules, weekDays[weekDays.length - 1])) continue;
+        if (!weekDays.some((d) => isQuotaOn(habit.habit_schedules, d))) continue;
         const result = quotaWeek(habit, logs, weekDays, weekEnd, todayISODate);
         scheduled += result.scheduled;
         completed += result.completed;

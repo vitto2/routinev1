@@ -4,6 +4,7 @@ import {
   DIGEST_HOURS,
   EVENING_HOURS,
   inWindow,
+  isHabitReminderDue,
   isTaskReminderDue,
   localMoment,
   timeToMinutes,
@@ -45,5 +46,23 @@ describe("janelas de lembrete", () => {
 
   it("converte HH:MM em minutos", () => {
     assert.equal(timeToMinutes("07:05"), 425);
+  });
+});
+
+describe("lembrete por hábito", () => {
+  const at = (iso: string) => localMoment(new Date(iso), "America/Sao_Paulo");
+
+  it("dispara no horário e até 1h depois, nunca antes", () => {
+    // lembrete às 18:30 (hora de São Paulo = 21:30 UTC)
+    assert.equal(isHabitReminderDue("18:30:00", at("2026-10-08T21:29:00Z")), false);
+    assert.equal(isHabitReminderDue("18:30:00", at("2026-10-08T21:30:00Z")), true);
+    assert.equal(isHabitReminderDue("18:30", at("2026-10-08T22:29:00Z")), true);
+    assert.equal(isHabitReminderDue("18:30", at("2026-10-08T22:30:00Z")), false);
+  });
+
+  it("respeita o fuso do usuário", () => {
+    // 21:30 UTC é 06:30 em Tóquio do dia seguinte: lembrete das 18:30 não dispara
+    const tokyo = localMoment(new Date("2026-10-08T21:30:00Z"), "Asia/Tokyo");
+    assert.equal(isHabitReminderDue("18:30", tokyo), false);
   });
 });

@@ -53,6 +53,25 @@ export const habitSchema = z
     icon: z.string().trim().max(50).optional().nullable(),
     color: z.string().trim().max(20).optional().nullable(),
     schedule: scheduleSchema,
+    // Recursos da migration 0004: omitidos pelo cliente quando o schema ainda é o antigo.
+    reminder_time: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, "Horário inválido")
+      .nullable()
+      .optional(),
+    challenge_days: z
+      .number()
+      .int("Use um número inteiro de dias")
+      .min(7, "O desafio precisa ter ao menos 7 dias")
+      .max(365, "O desafio pode ter no máximo 365 dias")
+      .nullable()
+      .optional(),
+    challenge_start_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha a data de início")
+      .nullable()
+      .optional(),
+    routine_id: z.uuid().nullable().optional(),
   })
   .superRefine((habit, ctx) => {
     const measured =

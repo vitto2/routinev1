@@ -51,7 +51,11 @@ function ratio(a, b) {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
-const over = (fg, bg, alpha) => fg.map((c, i) => c * alpha + bg[i] * (1 - alpha));
+// O navegador compõe transparência em sRGB (com gama), não em luz linear.
+const toSrgb = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+const fromSrgb = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const over = (fg, bg, alpha) =>
+  fg.map((c, i) => fromSrgb(toSrgb(c) * alpha + toSrgb(bg[i]) * (1 - alpha)));
 function mixOklab(c1, c2, w1) {
   const a = linearToOklab(c1);
   const b = linearToOklab(c2);
@@ -113,6 +117,13 @@ for (const [theme, selector] of [["CLARO", ":root"], ["ESCURO", ".dark"]]) {
     check(`calendário ${name}: texto secundário sobre tom 12%`, t["muted-foreground"], tint, 4.5);
     check(`calendário ${name}: ícone sobre tom 12% (UI 3:1)`, t[name], tint, 3);
   }
+  // Faixa de pausa no Hoje: texto a 80% e ícone sobre warning/10% (sobre o fundo da página).
+  const pauseTint = over(t.warning, t.background, 0.1);
+  check("faixa de pausa: texto (80%) sobre tom 10%", over(t.foreground, pauseTint, 0.8), pauseTint, 4.5);
+  check("faixa de pausa: ícone sobre tom 10% (UI 3:1)", t.warning, pauseTint, 3);
+  // Cartão de pausa no Perfil: ícone warning sobre warning/15% do card.
+  check("cartão de pausa: ícone sobre tom 15% (UI 3:1)", t.warning, over(t.warning, t.card, 0.15), 3);
+
   // Barras dos gráficos: preenchida e contorno do período em andamento sobre o card.
   check("gráfico: barra primary / card (UI 3:1)", t.primary, t.card, 3);
   check("gráfico: contorno primary / card (UI 3:1)", t.primary, t.card, 3);

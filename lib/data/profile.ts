@@ -26,3 +26,11 @@ export async function getOrCreateProfile(
   if (error) throw new Error(error.message);
   return created;
 }
+
+/**
+ * A migration 0004 já foi aplicada? `last_review_date` só existe depois dela.
+ * Enquanto não existir, os recursos que dependem de colunas/tabelas novas ficam ocultos.
+ */
+export function hasSchemaV2(profile: object): boolean {
+  return "last_review_date" in profile;
+}
