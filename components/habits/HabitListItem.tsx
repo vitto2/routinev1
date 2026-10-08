@@ -150,16 +150,17 @@ export function HabitListItem({
     }
   }
 
-  /** Mostra o desfecho de um registro: aviso de guardado, de falha ou (opcional) de conclusão. */
+  /**
+   * Mostra o desfecho de um registro: aviso de guardado ou, se salvo, o de conclusão.
+   * Quando o servidor recusa ("failed"), quem avisa é o motor da fila (uma vez só).
+   */
   function handleOutcome(
     outcome: SubmitOutcome,
     onSaved?: (result: LogResult) => void,
   ) {
     if (outcome.status === "queued") {
       toast(queuedMessage(), { id: TOAST_ID, duration: 4000 });
-    } else if (outcome.status === "failed") {
-      toast.error("Não foi possível salvar esta alteração.");
-    } else if (outcome.result && onSaved) {
+    } else if (outcome.status === "saved" && outcome.result && onSaved) {
       onSaved(outcome.result as LogResult);
     }
   }

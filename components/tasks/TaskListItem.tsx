@@ -43,11 +43,10 @@ export function TaskListItem({
       setCompleted(next);
       try {
         const outcome = await submitTaskCompletion(task.id, next);
+        // Se o servidor recusar ("failed"), quem avisa é o motor da fila (uma vez só).
         if (outcome.status === "queued") {
           toast(queuedMessage(), { id: "task-feedback", duration: 4000 });
-        } else if (outcome.status === "failed") {
-          toast.error("Não foi possível atualizar a tarefa");
-        } else if (next && announce) {
+        } else if (outcome.status === "saved" && next && announce) {
           toast(`Tarefa concluída: ${task.title}`, {
             id: "task-feedback",
             duration: 6000,

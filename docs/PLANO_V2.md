@@ -1,5 +1,10 @@
 # Plano da atualização V2 — 14 funcionalidades
 
+> **Status: implementado.** As 14 funcionalidades e a nova aba **Progresso** (7/30/60 dias, vezes feito
+> por hábito, padrão por dia da semana) estão no código, com testes. O que falta não é código, é
+> **configuração e validação com conta real**: rodar a migration `0004`, configurar push e Google e
+> passar o roteiro de `docs/TESTES_MANUAIS.md`. Limitações conhecidas na seção 8.
+
 Princípio: **nenhuma funcionalidade pode quebrar o que já funciona.** Cada uma entra com
 testes, degrada com segurança se o banco ainda não tiver a migration, e só vai para o
 GitHub depois de passar em `tsc`, `lint`, `npm test`, `npm run check:contrast` e `build`.
@@ -31,13 +36,13 @@ GitHub depois de passar em `tsc`, `lint`, `npm test`, `npm run check:contrast` e
 | 2 | **Sequências e gamificação leve** | 🔥 por hábito no Hoje e no Progresso; melhor sequência; mensagens de marco (3, 7, 14, 21, 30, 50, 100, 200, 365) ao concluir | A ação devolve a sequência já calculada; nunca punitivo (sem "perdeu tudo") |
 | 3 | **Calendário mensal** | Grade do mês com % do dia, ícone e tom (nunca só cor); navegação por `?m=AAAA-MM`; toque abre o dia | Dias futuros desabilitados; tabela alternativa para leitor de tela |
 | 4 | **Gráficos de evolução** | Barras das últimas 8 semanas e 6 meses com linha de tendência ("subindo/estável/caindo") | Períodos sem hábito programado aparecem vazios, não 0% |
-| 5 | **Desfazer ao concluir** | Aviso "Concluído · Desfazer" por 5 s (hábitos e tarefas) | Usa a ação de estado absoluto, então não inverte se o usuário já tocou de novo |
+| 5 | **Desfazer ao concluir** | Aviso "Concluído · Desfazer" por 6 s (hábitos e tarefas) | Usa a ação de estado absoluto, então não inverte se o usuário já tocou de novo |
 | 6 | **Nota por registro** | Ícone de nota em cada hábito (Hoje e dia passado); aparece no histórico | Salvar nota não pode alterar `completed`/`value` |
 | 7 | **Revisão semanal** | `/review`: nota da semana vs anterior, melhor e pior dia, hábito mais forte e mais negligenciado, sugestão com regras simples; push no domingo à noite | Tom encorajador; sugestão só com dados suficientes (3+ semanas) |
 | 8 | **Lembrete por hábito** | Campo "Lembrete (horário)" no hábito; o cron avisa se o hábito está programado, não concluído e não pausado | `last_reminded_date` evita repetir; respeita fuso e pausa |
 | 9 | **Pausa / férias** | Pausar um hábito ou todos, com data de retorno ou indefinida; faixa "Modo pausa" no Hoje com botão Retomar | Planejamento puro e testado (`planPause`); nunca apaga histórico |
 | 10 | **Login com Google** | Botão no login/cadastro, rota `/auth/callback` com `exchangeCodeForSession` e `next` validado contra open redirect | Só aparece com `NEXT_PUBLIC_GOOGLE_AUTH=true`; exige configurar Google e Supabase |
-| 11 | **Marcar offline** | Fila local (IndexedDB) de estados absolutos por chave, sincronizada ao voltar online/foco; página Hoje em cache | Não pode afetar o fluxo online; limpar cache e fila ao sair da conta |
+| 11 | **Marcar offline** | Fila local (`localStorage`: poucos itens pequenos e leitura síncrona) de estados absolutos por chave, sincronizada ao abrir, voltar online, voltar o foco e a cada 30 s; Hoje, Semana, Progresso e Perfil em cache (última visita). Detalhes em `docs/OFFLINE.md` | Não pode afetar o fluxo online; limpar cache, fila e assinatura push ao sair da conta |
 | 12 | **Exportar CSV** | `/api/export?tipo=registros\|tarefas\|habitos` (UTF-8 com BOM) | Escape correto e proteção contra injeção de fórmula (`=`, `+`, `-`, `@`) |
 | 13 | **Desafios 21/30/66/90 dias** | Opção no hábito; chip "Dia 12/30"; cartões no Progresso; encerramento com resumo | Mede sobre os dias **programados** da janela, com pausa respeitada |
 | 14 | **Rotinas (manhã/noite)** | Hábitos agrupados e ordenados por rotina no Hoje; tela `/routines` com reordenar por botões | Sem biblioteca de arrastar: botões subir/descer acessíveis |
@@ -69,3 +74,21 @@ verificação no navegador do que não depende de login (e do que depende, quand
 
 - Rodar `supabase/migrations/0004_v2.sql` (uma vez).
 - Google: criar credencial OAuth no Google Cloud, ativar o provedor no Supabase e definir `NEXT_PUBLIC_GOOGLE_AUTH=true` na Vercel.
+- Push: chaves VAPID, variáveis na Vercel e `supabase/cron_reminders.sql` (veja `docs/NOTIFICACOES.md`).
+- Validar com conta real usando `docs/TESTES_MANUAIS.md`.
+
+## 8. Limitações conhecidas
+
+- **Offline:** o iPhone não sincroniza em segundo plano (só com o app aberto); as telas em cache mostram a
+  última visita. Detalhes em `docs/OFFLINE.md`.
+- **Sequência de "X por semana"** é contada em semanas, não em dias.
+- **Progresso** lê até 400 dias de registros (várias requisições paginadas) a cada abertura. Se ficar
+  lento com muito histórico, agregar no banco (view ou RPC).
+- **Push:** o cron da Vercel no plano Hobby roda só uma vez por dia; por isso o lembrete usa
+  `pg_cron` + `pg_net` do Supabase, a cada 5 minutos.
+- **Google no PWA do iPhone:** o app instalado tem armazenamento separado do Safari; testar o fluxo de login.
+- **Cobertura:** as regras são testadas por unidade e o banco por `npm run check:db`, mas nenhum teste
+  automático exercita as Server Actions contra o Supabase real. Essa parte é o roteiro manual.
+- **Ideias que ficaram de fora:** opção para desligar as mensagens de comemoração, botões nas
+  notificações (concluir/adiar), marcos de desafio em 25/50/75/100%, "pular dia" separado de pausa,
+  reordenar hábitos no Hoje, login com Apple, integração com calendário externo.
