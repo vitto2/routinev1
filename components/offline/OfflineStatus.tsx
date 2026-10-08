@@ -1,28 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CloudOff, RefreshCw } from "lucide-react";
 import { flushPending } from "@/lib/offline/client";
 import { pendingStore, useOnline, usePendingCount } from "@/lib/offline/store";
 
-/** Quanto tempo esperar entre tentativas automáticas enquanto houver itens pendentes. */
+/** Quanto esperar entre tentativas automáticas enquanto houver itens pendentes. */
 const RETRY_MS = 30_000;
+
+/**
+ * Esperas (ms) para tentar de novo logo depois de uma falha de rede em que o navegador
+ * ainda diz estar online (sinal ruim, servidor fora): nesses casos o evento `online` nunca
+ * dispara, e esperar o ciclo de 30 s deixaria a marcação parada sem necessidade.
+ */
+const BACKOFF_MS = [2_000, 5_000, 10_000, 20_000];
 
 /**
  * Faixa no topo quando não há conexão ou há alterações a enviar. Também é quem
  * dispara a sincronização: ao abrir o app, ao voltar a internet, ao voltar o foco
- * à aba e a cada 30 s enquanto houver pendências.
+ * à aba, a cada 30 s enquanto houver pendências e, depois de uma falha de rede, em
+ * esperas curtas e crescentes.
  */
 export function OfflineStatus() {
   const router = useRouter();
   const online = useOnline();
   const count = usePendingCount();
   const [syncing, setSyncing] = useState(false);
+  const failures = useRef(0);
+  const retryTimer = useRef<number | null>(null);
+  const syncRef = useRef<() => Promise<void>>(async () => {});
 
   const sync = useCallback(async () => {
     if (!navigator.onLine || Object.keys(pendingStore.get()).length === 0) return;
+
+    if (retryTimer.current !== null) {
+      window.clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+    }
 
     setSyncing(true);
     try {
@@ -36,15 +52,30 @@ export function OfflineStatus() {
         );
         router.refresh();
       }
+
+      if (summary.offline && summary.remaining > 0) {
+        const wait = BACKOFF_MS[Math.min(failures.current, BACKOFF_MS.length - 1)];
+        failures.current += 1;
+        retryTimer.current = window.setTimeout(() => void syncRef.current(), wait);
+      } else {
+        failures.current = 0;
+      }
     } finally {
       setSyncing(false);
     }
   }, [router]);
 
   useEffect(() => {
+    syncRef.current = sync;
+  }, [sync]);
+
+  useEffect(() => {
     // Adiado um tick: evita atualizar estado de forma síncrona dentro do efeito.
     const first = window.setTimeout(() => void sync(), 0);
-    const onOnline = () => void sync();
+    const onOnline = () => {
+      failures.current = 0;
+      void sync();
+    };
     const onVisible = () => {
       if (document.visibilityState === "visible") void sync();
     };
@@ -56,6 +87,7 @@ export function OfflineStatus() {
     return () => {
       window.clearTimeout(first);
       window.clearInterval(interval);
+      if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };

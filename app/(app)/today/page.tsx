@@ -25,6 +25,9 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { ScoreCard } from "@/components/progress/ScoreCard";
 import type { HabitLog, HabitWithSchedules } from "@/types/domain";
 
+/** Quantas tarefas atrasadas aparecem de cara; o resto fica atrás de "Ver mais". */
+const OVERDUE_VISIBLE = 3;
+
 export default async function TodayPage() {
   const { user } = await requireUser();
   const supabase = await createClient();
@@ -128,20 +131,6 @@ export default async function TodayPage() {
 
       {paused.length > 0 ? <PauseBanner paused={paused} total={activeHabits.length} /> : null}
 
-      {overdue.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-destructive">
-            <AlarmClock className="size-4" />
-            Atrasadas ({overdue.length})
-          </h2>
-          <div className="space-y-2">
-            {overdue.map((task, i) => (
-              <TaskListItem key={task.id} task={task} today={today} index={i} overdue />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       <section className="space-y-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
           Hábitos de hoje
@@ -205,6 +194,36 @@ export default async function TodayPage() {
           </div>
         )}
       </section>
+
+      {/* Depois dos hábitos e das tarefas de hoje: uma pilha de atrasadas não pode empurrar o essencial para fora da tela. */}
+      {overdue.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-destructive">
+            <AlarmClock className="size-4" />
+            Atrasadas ({overdue.length})
+          </h2>
+          <div className="space-y-2">
+            {overdue.slice(0, OVERDUE_VISIBLE).map((task, i) => (
+              <TaskListItem key={task.id} task={task} today={today} index={i} overdue />
+            ))}
+          </div>
+          {overdue.length > OVERDUE_VISIBLE ? (
+            <details className="group">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-accent/40 [&::-webkit-details-marker]:hidden">
+                <span className="group-open:hidden">
+                  Ver mais {overdue.length - OVERDUE_VISIBLE}
+                </span>
+                <span className="hidden group-open:inline">Ver menos</span>
+              </summary>
+              <div className="mt-2 space-y-2">
+                {overdue.slice(OVERDUE_VISIBLE).map((task, i) => (
+                  <TaskListItem key={task.id} task={task} today={today} index={i} overdue />
+                ))}
+              </div>
+            </details>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }
