@@ -4,11 +4,15 @@ import { useOptimistic, useState, useTransition } from "react";
 import { Check, Minus, NotebookPen, Plus, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { LogResult } from "@/lib/actions/habitLogs";
 import {
-  setHabitCompletion,
-  setHabitValue,
-  type LogResult,
-} from "@/lib/actions/habitLogs";
+  queuedMessage,
+  submitHabitCompletion,
+  submitHabitValue,
+  type SubmitOutcome,
+} from "@/lib/offline/client";
+import { overlayHabitState } from "@/lib/offline/overlay";
+import { usePendingEntry } from "@/lib/offline/store";
 import { celebrationMessage, type StreakUnit } from "@/lib/gamification";
 import {
   ICONS_BY_NAME,
@@ -109,8 +113,14 @@ export function HabitListItem({
   challenge?: ChallengeView;
 }) {
   const [pending, startTransition] = useTransition();
+  // Alteração feita sem internet (ou ainda em envio) vale mais que o dado do servidor.
+  const pendingEntry = usePendingEntry(`h:${habit.id}:${dateISO}`);
   const [state, setOptimistic] = useOptimistic<LogState, LogState>(
-    { completed: log?.completed ?? false, value: Number(log?.value ?? 0) },
+    overlayHabitState(
+      pendingEntry,
+      { completed: log?.completed ?? false, value: Number(log?.value ?? 0) },
+      habit.target_value,
+    ),
     (_current, next) => next,
   );
   const [noteOpen, setNoteOpen] = useState(false);
@@ -136,7 +146,21 @@ export function HabitListItem({
         action,
       });
     } else {
-      toast(`Concluído: ${habit.name}`, { id: TOAST_ID, duration: 4000, action });
+      toast(`Concluído: ${habit.name}`, { id: TOAST_ID, duration: 6000, action });
+    }
+  }
+
+  /** Mostra o desfecho de um registro: aviso de guardado, de falha ou (opcional) de conclusão. */
+  function handleOutcome(
+    outcome: SubmitOutcome,
+    onSaved?: (result: LogResult) => void,
+  ) {
+    if (outcome.status === "queued") {
+      toast(queuedMessage(), { id: TOAST_ID, duration: 4000 });
+    } else if (outcome.status === "failed") {
+      toast.error("Não foi possível salvar esta alteração.");
+    } else if (outcome.result && onSaved) {
+      onSaved(outcome.result as LogResult);
     }
   }
 
@@ -145,8 +169,10 @@ export function HabitListItem({
     startTransition(async () => {
       setOptimistic({ completed: next, value: state.value });
       try {
-        const result = await setHabitCompletion(habit.id, dateISO, next);
-        if (next && announceDone) announce(result, () => commitCompletion(false, false));
+        const outcome = await submitHabitCompletion(habit.id, dateISO, next);
+        handleOutcome(outcome, (result) => {
+          if (next && announceDone) announce(result, () => commitCompletion(false, false));
+        });
       } catch {
         toast.error("Não foi possível atualizar");
       }
@@ -157,14 +183,17 @@ export function HabitListItem({
   function commitValue(nextValue: number, previousValue: number, announceDone: boolean) {
     const target = habit.target_value ?? 0;
     const completed = target > 0 ? nextValue >= target : nextValue > 0;
+    const wasCompleted = state.completed;
 
     startTransition(async () => {
       setOptimistic({ completed, value: nextValue });
       try {
-        const result = await setHabitValue(habit.id, dateISO, nextValue);
-        if (announceDone && result.completed && !state.completed) {
-          announce(result, () => commitValue(previousValue, nextValue, false));
-        }
+        const outcome = await submitHabitValue(habit.id, dateISO, nextValue);
+        handleOutcome(outcome, (result) => {
+          if (announceDone && result.completed && !wasCompleted) {
+            announce(result, () => commitValue(previousValue, nextValue, false));
+          }
+        });
       } catch {
         toast.error("Não foi possível atualizar");
       }

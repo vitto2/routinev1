@@ -4,7 +4,10 @@ import { useOptimistic, useState, useTransition } from "react";
 import { Check, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { setTaskCompletion, deleteTask } from "@/lib/actions/tasks";
+import { deleteTask } from "@/lib/actions/tasks";
+import { queuedMessage, submitTaskCompletion } from "@/lib/offline/client";
+import { overlayTaskCompleted } from "@/lib/offline/overlay";
+import { usePendingEntry } from "@/lib/offline/store";
 import { formatDisplayDate } from "@/lib/dates";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import type { Task } from "@/types/domain";
@@ -28,8 +31,9 @@ export function TaskListItem({
 }) {
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
+  const pendingEntry = usePendingEntry(`t:${task.id}`);
   const [completed, setCompleted] = useOptimistic(
-    task.completed,
+    overlayTaskCompleted(pendingEntry, task.completed),
     (_current, next: boolean) => next,
   );
 
@@ -38,11 +42,15 @@ export function TaskListItem({
     startTransition(async () => {
       setCompleted(next);
       try {
-        await setTaskCompletion(task.id, next);
-        if (next && announce) {
+        const outcome = await submitTaskCompletion(task.id, next);
+        if (outcome.status === "queued") {
+          toast(queuedMessage(), { id: "task-feedback", duration: 4000 });
+        } else if (outcome.status === "failed") {
+          toast.error("Não foi possível atualizar a tarefa");
+        } else if (next && announce) {
           toast(`Tarefa concluída: ${task.title}`, {
             id: "task-feedback",
-            duration: 4000,
+            duration: 6000,
             action: { label: "Desfazer", onClick: () => commit(false, false) },
           });
         }

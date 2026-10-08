@@ -38,3 +38,26 @@ alter table habits add column if not exists routine_id uuid
   references routines (id) on delete set null;
 
 create index if not exists habits_routine_id_idx on habits (routine_id);
+
+-- =========================================================
+-- Login social (Google): aproveita o nome enviado pelo provedor
+-- =========================================================
+create or replace function handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, display_name, timezone)
+  values (
+    new.id,
+    coalesce(
+      nullif(new.raw_user_meta_data ->> 'display_name', ''),
+      nullif(new.raw_user_meta_data ->> 'full_name', ''),
+      nullif(new.raw_user_meta_data ->> 'name', '')
+    ),
+    coalesce(new.raw_user_meta_data ->> 'timezone', 'America/Sao_Paulo')
+  );
+  return new;
+end;
+$$;

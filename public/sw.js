@@ -1,8 +1,13 @@
-/* Service worker do Routine: cache de assets estáticos, fallback offline e push. */
-const VERSION = "routine-v1";
+/* Service worker do Routine: cache de assets estáticos, páginas principais offline e push. */
+const VERSION = "routine-v2";
 const STATIC_CACHE = `${VERSION}-static`;
+// Termina em "-pages": o app apaga todos os caches com esse sufixo ao sair da conta.
+const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png"];
+
+// Só estas telas ficam disponíveis sem internet (a última versão visitada).
+const OFFLINE_PAGES = new Set(["/today", "/week", "/progress", "/profile"]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -19,6 +24,33 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+/**
+ * Navegação: sempre rede primeiro (dados e sessão são dinâmicos). Se a rede falhar,
+ * usa a última cópia da tela; sem cópia, mostra a página de aviso offline.
+ */
+async function handleNavigation(event) {
+  const url = new URL(event.request.url);
+  const cacheable = OFFLINE_PAGES.has(url.pathname);
+
+  try {
+    const response = await fetch(event.request);
+
+    // Não guarda redirecionamentos (ex.: sessão expirada levando ao login) nem erros.
+    if (cacheable && response.ok && !response.redirected) {
+      const copy = response.clone();
+      event.waitUntil(caches.open(PAGES_CACHE).then((cache) => cache.put(url.pathname, copy)));
+    }
+
+    return response;
+  } catch {
+    if (cacheable) {
+      const cached = await caches.match(url.pathname, { cacheName: PAGES_CACHE });
+      if (cached) return cached;
+    }
+    return caches.match(OFFLINE_URL);
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -26,9 +58,8 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Navegação: sempre rede (dados e sessão são dinâmicos); offline -> página de aviso.
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(handleNavigation(event));
     return;
   }
 

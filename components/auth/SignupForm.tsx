@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { GOOGLE_ENABLED, GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 
 const initialState: AuthFormState = { error: null, message: null };
 
@@ -59,6 +60,13 @@ export function SignupForm() {
       noValidate
       className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm"
     >
+      {GOOGLE_ENABLED ? (
+        <>
+          <GoogleButton label="Cadastrar com o Google" />
+          <OrDivider />
+        </>
+      ) : null}
+
       <Field id="signup-name" label="Nome" optionalHint error={fieldError("display_name")}>
         {(props) => (
           <Input

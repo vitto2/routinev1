@@ -6,6 +6,7 @@ import { getHabitsWithSchedules } from "@/lib/data/habits";
 import { todayISO } from "@/lib/dates";
 import { pausedHabits } from "@/lib/scheduling/pause";
 import { PauseCard } from "@/components/pause/PauseCard";
+import { ExportCard } from "@/components/profile/ExportCard";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { TimezoneSync } from "@/components/auth/TimezoneSync";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -75,6 +76,8 @@ export default async function ProfilePage() {
           <ChevronRight className="size-4 text-muted-foreground" />
         </Link>
       </nav>
+
+      <ExportCard />
 
       <SignOutButton />
     </div>

@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { GOOGLE_ENABLED, GoogleButton, OrDivider } from "@/components/auth/GoogleButton";
 
 const initialState: AuthFormState = { error: null, message: null };
 
-export function LoginForm() {
+export function LoginForm({ googleError = false }: { googleError?: boolean }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,6 +55,13 @@ export function LoginForm() {
       noValidate
       className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm"
     >
+      {GOOGLE_ENABLED ? (
+        <>
+          <GoogleButton />
+          <OrDivider />
+        </>
+      ) : null}
+
       <Field id="login-email" label="Email" required error={fieldError("email")}>
         {(props) => (
           <Input
@@ -89,6 +97,16 @@ export function LoginForm() {
           />
         )}
       </Field>
+
+      {googleError && !state.error ? (
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-xl bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive"
+        >
+          <CircleAlert className="mt-0.5 size-4 shrink-0" />
+          Não foi possível entrar com o Google. Tente novamente ou use email e senha.
+        </p>
+      ) : null}
 
       {state.error ? (
         <p

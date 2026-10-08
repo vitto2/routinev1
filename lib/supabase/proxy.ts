@@ -2,7 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database.types";
 
-const PUBLIC_PATHS = ["/login", "/signup"];
+// "/auth/" = retorno do login social, que chega ainda sem sessão.
+const PUBLIC_PATHS = ["/login", "/signup", "/auth/"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
