@@ -91,7 +91,7 @@ export function HabitPeriodCard({
         ) : null}
         <Fact label="Frequência">{pluralize(stats.perWeek, "vez", "vezes")} por semana</Fact>
         <Fact label="Última vez">
-          {since === null ? "Sem registro no período" : relativeDays(since)}
+          {since === null ? "Nenhuma conclusão no período" : relativeDays(since)}
         </Fact>
         <Fact label="Sequência atual">
           {streak && streak.current > 0 ? (

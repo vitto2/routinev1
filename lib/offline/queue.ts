@@ -149,32 +149,39 @@ export function serialize(map: PendingMap): string {
 }
 
 /**
+ * O servidor recebeu o item e o recusou DE PROPÓSITO (data inválida, hábito removido ou
+ * não programado naquele dia...). As ações devolvem `{ rejected }` nesses casos, em vez
+ * de lançar erro: em produção o Next esconde a mensagem de qualquer exceção e só deixa
+ * um `digest`, então uma queda passageira do banco seria indistinguível de uma recusa.
+ */
+export class RejectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RejectedError";
+  }
+}
+
+/**
  * - network: sem conexão, servidor indisponível ou página de versão antiga. O item FICA
  *   na fila (nunca é descartado por isso) e é reenviado depois.
- * - permanent: o servidor recebeu e recusou (data inválida, hábito removido...). Descartar.
- * - unknown: erro inesperado. Tenta de novo algumas vezes (MAX_ATTEMPTS) e então desiste,
- *   para que um item "envenenado" não fique para sempre na fila.
+ * - permanent: o servidor recusou de propósito (RejectedError). Reenviar não adianta: descartar.
+ * - unknown: qualquer outra falha, inclusive exceção no servidor (banco fora do ar, tempo
+ *   esgotado). Tenta de novo algumas vezes (MAX_ATTEMPTS) e só então desiste, para que um
+ *   item "envenenado" não fique para sempre na fila, mas uma queda curta não perca marcações.
  */
 export type ErrorKind = "network" | "permanent" | "unknown";
 
 const TRANSIENT_MESSAGE =
   /failed to fetch|fetch failed|networkerror|load failed|network request failed|unexpected response was received|failed to find server action/i;
 
-/**
- * Em produção o Next esconde a mensagem de erros lançados no servidor, mas anexa um
- * `digest`: é assim que reconhecemos "o servidor recebeu e recusou".
- */
 export function classifyError(error: unknown, online: boolean): ErrorKind {
+  if (error instanceof RejectedError) return "permanent";
   if (!online) return "network";
   if (error instanceof TypeError) return "network";
 
   if (typeof error === "object" && error !== null) {
-    const e = error as { digest?: unknown; message?: unknown };
-    if (typeof e.digest === "string") return "permanent";
-    if (typeof e.message === "string") {
-      if (TRANSIENT_MESSAGE.test(e.message)) return "network";
-      if (/An error occurred in the Server Components render/i.test(e.message)) return "permanent";
-    }
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && TRANSIENT_MESSAGE.test(message)) return "network";
   }
   return "unknown";
 }

@@ -194,6 +194,34 @@ describe("revisão semanal", () => {
     assert.equal(review.weakest?.habitId, "b");
   });
 
+  it("hábito com poucos dias programados não vira o 'mais difícil'", () => {
+    const a = habit("a", { schedule_type: "daily" }, "2026-08-01");
+    const b = habit("b", { schedule_type: "daily" }, "2026-08-01");
+    // criado no último dia da semana: só 1 dia programado e nenhum registro (0%)
+    const novo = habit("novo", { schedule_type: "daily" }, "2026-10-04");
+    const logs = mergeLogs(
+      logsOn("a", ["2026-09-28", "2026-09-29", "2026-09-30"]),
+      logsOn("b", ["2026-09-28", "2026-09-29"]),
+    );
+    const review = buildWeeklyReview([a, b, novo], logs, weekStart, NEXT_DAY);
+
+    assert.equal(review.strongest?.habitId, "a");
+    assert.equal(review.weakest?.habitId, "b");
+  });
+
+  it("com empate entre os hábitos, ninguém é 'mais constante' nem 'mais difícil'", () => {
+    const a = habit("a", { schedule_type: "daily" }, "2026-08-01");
+    const b = habit("b", { schedule_type: "daily" }, "2026-08-01");
+    const logs = mergeLogs(
+      logsOn("a", ["2026-09-28", "2026-09-29"]),
+      logsOn("b", ["2026-09-30", "2026-10-01"]),
+    );
+    const review = buildWeeklyReview([a, b], logs, weekStart, NEXT_DAY);
+
+    assert.equal(review.strongest, null);
+    assert.equal(review.weakest, null);
+  });
+
   it("elogia uma semana excelente e a melhora sobre a anterior", () => {
     const a = habit("a", { schedule_type: "daily" }, "2026-08-01");
     const all = [

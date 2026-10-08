@@ -24,8 +24,8 @@ export interface EngineDeps {
   now(): number;
   /** Item entregue com sucesso. */
   onSettled?(entry: PendingEntry, result: unknown): void;
-  /** Item recusado pelo servidor e descartado. */
-  onFailed?(entry: PendingEntry): void;
+  /** Item descartado (recusado pelo servidor ou sem sucesso após várias tentativas). */
+  onFailed?(entry: PendingEntry, error: unknown): void;
 }
 
 export type SubmitOutcome =
@@ -95,7 +95,7 @@ export function createEngine(deps: EngineDeps) {
           if (kind === "permanent" || attempts >= MAX_ATTEMPTS) {
             failures.add(stamp(entry));
             deps.store.set(removeIfUnchanged(deps.store.get(), entry.key, entry.updatedAt));
-            deps.onFailed?.(entry);
+            deps.onFailed?.(entry, error);
             summary.failed += 1;
             progressed = true;
           } else {

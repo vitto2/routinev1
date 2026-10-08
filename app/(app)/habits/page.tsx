@@ -7,7 +7,7 @@ import { describeSchedule } from "@/lib/scheduling/summary";
 import { ICONS_BY_NAME, accentStyles } from "@/lib/constants/appearance";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { HabitWithSchedules } from "@/types/domain";
 
@@ -33,10 +33,13 @@ export default async function HabitsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-2">
         <PageHeader title="Hábitos" backHref="/profile" />
-        <Button render={<Link href="/habits/new" />} size="sm" variant="outline" className="mb-6">
+        <Link
+          href="/habits/new"
+          className={buttonVariants({ size: "sm", variant: "outline", className: "mb-6" })}
+        >
           <Plus className="size-4" />
           Novo
-        </Button>
+        </Link>
       </div>
 
       {active.length === 0 ? (

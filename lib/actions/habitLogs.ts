@@ -32,27 +32,43 @@ export interface LogResult {
   newBest: boolean;
 }
 
+/**
+ * Recusa esperada (dado inválido): devolvida em vez de lançada. Em produção o Next
+ * esconde a mensagem de qualquer exceção, e a fila offline precisa distinguir "o
+ * servidor recusou" (descartar) de "o banco falhou agora" (tentar de novo).
+ */
+export interface LogRejection {
+  rejected: string;
+}
+
 const idSchema = z.uuid();
 const MAX_NOTE_LENGTH = 280;
+
+type LogContext = Awaited<ReturnType<typeof requireUser>> & {
+  habit: HabitWithSchedules;
+  today: string;
+};
 
 /**
  * Valida tudo o que vem do cliente antes de gravar: dono do hábito (RLS),
  * data (formato, não futura, janela de 400 dias) e se o hábito estava
- * programado naquele dia.
+ * programado naquele dia. Falha de validação devolve `{ rejected }`.
  */
-async function loadContext(habitId: string, dateISO: string) {
+async function loadContext(habitId: string, dateISO: string): Promise<LogContext | LogRejection> {
   const { supabase, user } = await requireUser();
-  const id = idSchema.parse(habitId);
+  const id = idSchema.safeParse(habitId);
+  if (!id.success) return { rejected: "Hábito inválido." };
+
   const profile = await getOrCreateProfile(supabase, user.id);
   const today = todayISO(profile.timezone);
 
   const dateError = validateLogDate(dateISO, today);
-  if (dateError) throw new Error(dateError);
+  if (dateError) return { rejected: dateError };
 
-  const habit = await getHabitWithSchedules(supabase, id);
-  if (!habit) throw new Error("Hábito não encontrado.");
+  const habit = await getHabitWithSchedules(supabase, id.data);
+  if (!habit) return { rejected: "Hábito não encontrado." };
   if (!isScheduledOn(habit.habit_schedules, dateISO)) {
-    throw new Error("Este hábito não está programado para esse dia.");
+    return { rejected: "Este hábito não está programado para esse dia." };
   }
 
   return { supabase, user, habit, today };
@@ -106,11 +122,13 @@ export async function setHabitCompletion(
   habitId: string,
   dateISO: string,
   completed: boolean,
-): Promise<LogResult> {
-  const { supabase, user, habit, today } = await loadContext(habitId, dateISO);
+): Promise<LogResult | LogRejection> {
+  const context = await loadContext(habitId, dateISO);
+  if ("rejected" in context) return context;
+  const { supabase, user, habit, today } = context;
 
   if (habit.tracking_type !== "checkbox") {
-    throw new Error("Este hábito é registrado por valor, não por marcação.");
+    return { rejected: "Este hábito é registrado por valor, não por marcação." };
   }
 
   const existing = await readLog(supabase, habit.id, dateISO);
@@ -157,15 +175,17 @@ export async function setHabitValue(
   habitId: string,
   dateISO: string,
   value: number,
-): Promise<LogResult> {
-  const { supabase, user, habit, today } = await loadContext(habitId, dateISO);
+): Promise<LogResult | LogRejection> {
+  const context = await loadContext(habitId, dateISO);
+  if ("rejected" in context) return context;
+  const { supabase, user, habit, today } = context;
 
   if (habit.tracking_type === "checkbox") {
-    throw new Error("Este hábito é marcado como feito ou não feito.");
+    return { rejected: "Este hábito é marcado como feito ou não feito." };
   }
 
   const valueError = validateLogValue(value);
-  if (valueError) throw new Error(valueError);
+  if (valueError) return { rejected: valueError };
 
   const rounded = Math.round(value * 100) / 100;
   const completed = isCompletedByValue(rounded, habit.target_value);
@@ -219,7 +239,10 @@ export async function setHabitNote(
   dateISO: string,
   note: string | null,
 ): Promise<{ note: string | null }> {
-  const { supabase, user, habit } = await loadContext(habitId, dateISO);
+  const context = await loadContext(habitId, dateISO);
+  // A nota não passa pela fila offline: aqui o erro é mostrado direto ao usuário.
+  if ("rejected" in context) throw new Error(context.rejected);
+  const { supabase, user, habit } = context;
 
   const clean = (note ?? "").trim();
   if (clean.length > MAX_NOTE_LENGTH) {

@@ -7,7 +7,7 @@ import { getRoutines } from "@/lib/data/routines";
 import { PERIOD_BY_VALUE } from "@/lib/constants/routines";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function RoutinesPage() {
   const { supabase, user } = await requireUser();
@@ -48,10 +48,13 @@ export default async function RoutinesPage() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-2">
         <PageHeader title="Rotinas" backHref="/profile" />
-        <Button render={<Link href="/routines/new" />} size="sm" variant="outline" className="mb-6">
+        <Link
+          href="/routines/new"
+          className={buttonVariants({ size: "sm", variant: "outline", className: "mb-6" })}
+        >
           <Plus className="size-4" />
           Nova
-        </Button>
+        </Link>
       </div>
 
       {ordered.length === 0 ? (

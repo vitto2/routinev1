@@ -5,7 +5,7 @@ import { getPillars } from "@/lib/data/pillars";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { ICONS_BY_NAME, accentStyles } from "@/lib/constants/appearance";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function PillarsPage() {
   const supabase = await createClient();
@@ -15,10 +15,10 @@ export default async function PillarsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <PageHeader title="Pilares" backHref="/profile" />
-        <Button render={<Link href="/pillars/new" />} size="sm" variant="outline">
+        <Link href="/pillars/new" className={buttonVariants({ size: "sm", variant: "outline" })}>
           <Plus className="size-4" />
           Novo
-        </Button>
+        </Link>
       </div>
 
       {pillars.length === 0 ? (

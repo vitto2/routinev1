@@ -43,6 +43,8 @@ export interface WeeklyReview {
 type LogMap = Map<string, HabitLog>;
 
 const LOW = 0.5;
+/** Dias programados necessários para um hábito ser rotulado "mais constante"/"mais difícil". */
+const MIN_RATED_DAYS = 3;
 const CHRONIC_WEEKS = 3;
 const MAX_SUGGESTIONS = 3;
 
@@ -123,9 +125,13 @@ export function buildWeeklyReview(
   const habitList = habitStats(habits, logs, days, today).sort(
     (a, b) => b.percent - a.percent || b.scheduled - a.scheduled,
   );
-  const strongest = habitList[0] ?? null;
-  const weakest =
-    habitList.length >= 2 ? habitList[habitList.length - 1] : null;
+  // Só hábitos com amostra mínima ganham o rótulo: um hábito criado ontem, com 1 dia
+  // programado, não pode ser "o mais difícil" da semana.
+  // E só quando há diferença real: com empate (todos em 25%) ninguém se destaca.
+  const rated = habitList.filter((h) => h.scheduled >= MIN_RATED_DAYS);
+  const hasSpread = rated.length >= 2 && rated[0].percent > rated[rated.length - 1].percent;
+  const strongest = hasSpread ? rated[0] : null;
+  const weakest = hasSpread ? rated[rated.length - 1] : null;
 
   // --- sugestões (tom encorajador; poucas e só com dados suficientes) ---
   const suggestions: Suggestion[] = [];

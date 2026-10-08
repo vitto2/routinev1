@@ -1,13 +1,18 @@
 "use client";
 
 import { toast } from "sonner";
-import { setHabitCompletion, setHabitValue, type LogResult } from "@/lib/actions/habitLogs";
+import {
+  setHabitCompletion,
+  setHabitValue,
+  type LogRejection,
+  type LogResult,
+} from "@/lib/actions/habitLogs";
 import { setTaskCompletion } from "@/lib/actions/tasks";
 import { createEngine, type SubmitOutcome } from "@/lib/offline/engine";
+import { RejectedError, type PendingEntry } from "@/lib/offline/queue";
 import { markSettled, pendingStore } from "@/lib/offline/store";
-import type { PendingEntry } from "@/lib/offline/queue";
 
-function send(entry: PendingEntry): Promise<unknown> {
+function run(entry: PendingEntry): Promise<unknown> {
   switch (entry.kind) {
     case "habit-completion":
       return setHabitCompletion(entry.habitId, entry.date, entry.completed);
@@ -18,14 +23,34 @@ function send(entry: PendingEntry): Promise<unknown> {
   }
 }
 
+function isRejection(value: unknown): value is LogRejection {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { rejected?: unknown }).rejected === "string"
+  );
+}
+
+/** Envia um item; uma recusa explícita do servidor vira RejectedError (não adianta reenviar). */
+async function send(entry: PendingEntry): Promise<unknown> {
+  const result = await run(entry);
+  if (isRejection(result)) throw new RejectedError(result.rejected);
+  return result;
+}
+
 const engine = createEngine({
   store: pendingStore,
   send,
   isOnline: () => (typeof navigator === "undefined" ? true : navigator.onLine),
   now: () => Date.now(),
   onSettled: (entry) => markSettled(entry),
-  onFailed: () => {
-    toast.error("Uma alteração não pôde ser salva e foi descartada.", { id: "sync-failed" });
+  onFailed: (_entry, error) => {
+    toast.error(
+      error instanceof RejectedError
+        ? error.message
+        : "Uma alteração não pôde ser salva e foi descartada.",
+      { id: "sync-failed" },
+    );
   },
 });
 

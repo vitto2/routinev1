@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 export function EmptyState({
   icon: Icon,
@@ -23,9 +23,10 @@ export function EmptyState({
         <p className="text-sm text-muted-foreground">{description}</p>
       ) : null}
       {actionLabel && actionHref ? (
-        <Button render={<Link href={actionHref} />} size="sm" className="mt-2">
+        // Link com a aparência de botão: continua sendo um <a> (semântica de navegação).
+        <Link href={actionHref} className={buttonVariants({ size: "sm", className: "mt-2" })}>
           {actionLabel}
-        </Button>
+        </Link>
       ) : null}
     </div>
   );

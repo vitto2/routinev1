@@ -115,6 +115,11 @@ export async function runReminders(now = new Date()): Promise<ReminderSummary> {
       if (result === "gone") {
         await db.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
         summary.removedSubscriptions += 1;
+        // Aparelho expirado: não insiste nas próximas notificações desta execução.
+        subsByUser.set(
+          userId,
+          (subsByUser.get(userId) ?? []).filter((s) => s.endpoint !== sub.endpoint),
+        );
       }
     }
     return delivered;

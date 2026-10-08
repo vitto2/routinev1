@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { LogOut } from "lucide-react";
+import { toast } from "sonner";
 import { signOut } from "@/lib/actions/auth";
 import { removePushSubscription } from "@/lib/actions/push";
 import { clearOfflineData, pendingStore } from "@/lib/offline/store";
@@ -34,19 +35,24 @@ async function releasePush() {
   }
 }
 
+function discardMessage(waiting: number) {
+  return waiting === 1
+    ? "Há 1 alteração que ainda não foi enviada. Sair agora vai descartá-la. Deseja sair mesmo assim?"
+    : `Há ${waiting} alterações que ainda não foram enviadas. Sair agora vai descartá-las. Deseja sair mesmo assim?`;
+}
+
 export function SignOutButton() {
   const [pending, startTransition] = useTransition();
 
   function handleSignOut() {
-    const waiting = Object.keys(pendingStore.get()).length;
-    if (
-      waiting > 0 &&
-      !confirm(
-        `Há ${waiting} ${waiting === 1 ? "alteração" : "alterações"} que ainda não foram enviadas. Sair agora vai descartá-${waiting === 1 ? "la" : "las"}. Deseja sair mesmo assim?`,
-      )
-    ) {
+    // Sair precisa do servidor; offline, apagar a fila e não conseguir sair seria o pior dos mundos.
+    if (!navigator.onLine) {
+      toast.error("Sem conexão. Conecte-se à internet para sair da conta.");
       return;
     }
+
+    const waiting = Object.keys(pendingStore.get()).length;
+    if (waiting > 0 && !confirm(discardMessage(waiting))) return;
 
     startTransition(async () => {
       await Promise.race([
@@ -55,7 +61,11 @@ export function SignOutButton() {
       ]);
       // Privacidade: nada da conta fica guardado no aparelho depois de sair.
       await clearOfflineData();
-      await signOut();
+      try {
+        await signOut();
+      } catch {
+        toast.error("Não foi possível sair agora. Tente de novo.");
+      }
     });
   }
 

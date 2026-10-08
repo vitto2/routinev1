@@ -112,7 +112,9 @@ export function HabitListItem({
   /** desafio em andamento (dia atual / total) */
   challenge?: ChallengeView;
 }) {
-  const [pending, startTransition] = useTransition();
+  // Sem bloquear os botões enquanto envia: cada toque grava o valor total (estado absoluto)
+  // e a fila garante que o último vence, então toques rápidos somam.
+  const [, startTransition] = useTransition();
   // Alteração feita sem internet (ou ainda em envio) vale mais que o dado do servidor.
   const pendingEntry = usePendingEntry(`h:${habit.id}:${dateISO}`);
   const [state, setOptimistic] = useOptimistic<LogState, LogState>(
@@ -237,7 +239,6 @@ export function HabitListItem({
           habit={habit}
           value={state.value}
           completed={state.completed}
-          pending={pending}
           onChange={(next) => commitValue(next, state.value, true)}
           color={accentColor}
           bubble={bubble}
@@ -302,7 +303,6 @@ function ProgressHabitRow({
   habit,
   value,
   completed,
-  pending,
   onChange,
   color,
   bubble,
@@ -312,7 +312,6 @@ function ProgressHabitRow({
   habit: HabitWithSchedules;
   value: number;
   completed: boolean;
-  pending: boolean;
   onChange: (next: number) => void;
   color: string;
   bubble: React.ReactNode;
@@ -369,7 +368,6 @@ function ProgressHabitRow({
           <button
             key={inc}
             type="button"
-            disabled={pending}
             onClick={() => onChange(value + inc)}
             className="flex min-h-10 items-center gap-1 rounded-full border border-input bg-card px-3.5 text-sm font-medium transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
           >
@@ -382,7 +380,6 @@ function ProgressHabitRow({
           {value > 0 ? (
             <button
               type="button"
-              disabled={pending}
               onClick={() => onChange(Math.max(0, value - (increments[0] ?? 1)))}
               className="flex size-10 items-center justify-center rounded-full border border-input bg-card text-muted-foreground transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
               aria-label={`Remover ${increments[0]} ${unit}`}

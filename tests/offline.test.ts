@@ -6,6 +6,7 @@ import {
   MAX_ATTEMPTS,
   MAX_PENDING,
   QueueFullError,
+  RejectedError,
   bumpAttempts,
   classifyError,
   keyFor,
@@ -111,11 +112,15 @@ describe("classificação de erros", () => {
     assert.equal(classifyError(new Error('Failed to find Server Action "abc"'), true), "network");
   });
 
-  it("erro do servidor com digest é definitivo", () => {
+  it("só a recusa explícita do servidor é definitiva", () => {
+    assert.equal(classifyError(new RejectedError("Data inválida."), true), "permanent");
+  });
+
+  it("exceção no servidor (digest) não é recusa: pode ser o banco fora do ar", () => {
     const error = Object.assign(new Error("An error occurred in the Server Components render."), {
       digest: "123",
     });
-    assert.equal(classifyError(error, true), "permanent");
+    assert.equal(classifyError(error, true), "unknown");
   });
 
   it("o resto é desconhecido (tenta algumas vezes)", () => {
@@ -135,6 +140,7 @@ function setup(options: { online?: boolean } = {}) {
   const sent: PendingEntry[] = [];
   const settled: PendingEntry[] = [];
   const failed: PendingEntry[] = [];
+  const failures: unknown[] = [];
   let behavior: (entry: PendingEntry) => Promise<unknown> = async () => ({ ok: true });
 
   const store = {
@@ -153,7 +159,10 @@ function setup(options: { online?: boolean } = {}) {
       return behavior(entry);
     },
     onSettled: (entry) => settled.push(entry),
-    onFailed: (entry) => failed.push(entry),
+    onFailed: (entry, error) => {
+      failed.push(entry);
+      failures.push(error);
+    },
   });
 
   return {
@@ -162,6 +171,7 @@ function setup(options: { online?: boolean } = {}) {
     sent,
     settled,
     failed,
+    failures,
     setOnline: (value: boolean) => {
       online = value;
     },
@@ -267,16 +277,36 @@ describe("motor: sem internet", () => {
 });
 
 describe("motor: erros do servidor", () => {
-  it("recusa definitiva descarta o item e avisa", async () => {
+  it("recusa explícita descarta o item e avisa com o motivo", async () => {
     const ctx = setup();
     ctx.setBehavior(async () => {
-      throw Object.assign(new Error("recusado"), { digest: "x" });
+      throw new RejectedError("Este hábito não está programado para esse dia.");
     });
 
     const outcome = await ctx.engine.submit(completion("a", true));
 
     assert.equal(outcome.status, "failed");
     assert.equal(ctx.failed.length, 1);
+    assert.equal((ctx.failures[0] as Error).message, "Este hábito não está programado para esse dia.");
+    assert.deepEqual(ctx.store.get(), {});
+  });
+
+  it("exceção do servidor (banco fora do ar) não perde a marcação: guarda e envia quando voltar", async () => {
+    const ctx = setup();
+    ctx.setBehavior(async () => {
+      throw Object.assign(new Error("An error occurred in the Server Components render."), {
+        digest: "123",
+      });
+    });
+
+    const outcome = await ctx.engine.submit(completion("a", true));
+    assert.equal(outcome.status, "queued");
+    assert.equal(ctx.failed.length, 0);
+    assert.equal(Object.keys(ctx.store.get()).length, 1);
+
+    ctx.setBehavior(async () => ({ ok: true }));
+    const summary = await ctx.engine.flush();
+    assert.equal(summary.sent, 1);
     assert.deepEqual(ctx.store.get(), {});
   });
 
