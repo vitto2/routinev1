@@ -2,6 +2,11 @@ import Link from "next/link";
 import { AlarmClock, ListChecks } from "lucide-react";
 import type { TaskPeriodStats, TaskPriority } from "@/lib/progress/period";
 import { pluralize } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import { CardHeading, HeadingValue } from "@/components/ui/panel";
+import { StatTile } from "@/components/ui/stat-tile";
+import { surfaceVariants } from "@/components/ui/surface";
 
 const PRIORITY_LABEL: Record<TaskPriority, string> = {
   high: "Alta",
@@ -21,24 +26,21 @@ export function TaskSummaryCard({
   return (
     <section
       aria-label={`Tarefas, ${periodLabel}`}
-      className="animate-rise space-y-4 rounded-2xl border border-border bg-card p-4 shadow-sm"
+      data-ui="task-summary"
+      className={cn(surfaceVariants(), "animate-rise space-y-4")}
     >
-      <div className="flex items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <ListChecks className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-semibold">Tarefas</h3>
-          <p className="text-sm text-muted-foreground">
-            {stats.total === 0
-              ? `Nenhuma tarefa com data nos ${periodLabel}`
-              : `${stats.completed} de ${pluralize(stats.total, "tarefa", "tarefas")} concluídas`}
-          </p>
-        </div>
-        {stats.rate !== null ? (
-          <p className="text-xl font-bold tabular-nums">{pct(stats.rate)}%</p>
-        ) : null}
-      </div>
+      <CardHeading
+        as="h3"
+        align="center"
+        icon={ListChecks}
+        title="Tarefas"
+        description={
+          stats.total === 0
+            ? `Nenhuma tarefa com data nos ${periodLabel}`
+            : `${stats.completed} de ${pluralize(stats.total, "tarefa", "tarefas")} concluídas`
+        }
+        aside={stats.rate !== null ? <HeadingValue>{pct(stats.rate)}%</HeadingValue> : undefined}
+      />
 
       {stats.total > 0 ? (
         <>
@@ -56,32 +58,18 @@ export function TaskSummaryCard({
             />
           </div>
 
-          <dl className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-xl bg-muted p-2.5">
-              <dd className="text-lg font-bold tabular-nums">{stats.completed}</dd>
-              <dt className="text-[11px] text-muted-foreground">
-                {stats.completed === 1 ? "concluída" : "concluídas"}
-              </dt>
-            </div>
-            <div className="rounded-xl bg-muted p-2.5">
-              <dd className="text-lg font-bold tabular-nums">{stats.openToday}</dd>
-              <dt className="text-[11px] text-muted-foreground">para hoje</dt>
-            </div>
-            <div className="rounded-xl bg-muted p-2.5">
-              <dd
-                className={
-                  stats.overdue > 0
-                    ? "text-lg font-bold tabular-nums text-destructive"
-                    : "text-lg font-bold tabular-nums"
-                }
-              >
-                {stats.overdue}
-              </dd>
-              <dt className="text-[11px] text-muted-foreground">
-                {stats.overdue === 1 ? "atrasada" : "atrasadas"}
-              </dt>
-            </div>
-          </dl>
+          <div className="grid grid-cols-3 gap-2">
+            <StatTile
+              value={String(stats.completed)}
+              label={stats.completed === 1 ? "concluída" : "concluídas"}
+            />
+            <StatTile value={String(stats.openToday)} label="para hoje" />
+            <StatTile
+              value={String(stats.overdue)}
+              tone={stats.overdue > 0 ? "danger" : "default"}
+              label={stats.overdue === 1 ? "atrasada" : "atrasadas"}
+            />
+          </div>
 
           <ul className="space-y-1.5 text-sm" aria-label="Por prioridade">
             {(["high", "medium", "low"] as const).map((priority) => {
@@ -99,11 +87,8 @@ export function TaskSummaryCard({
           </ul>
 
           {stats.overdue > 0 ? (
-            <Link
-              href="/today"
-              className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-input bg-card text-sm font-medium transition-colors hover:bg-accent"
-            >
-              <AlarmClock className="size-4 text-destructive" aria-hidden />
+            <Link href="/today" className={buttonVariants({ variant: "outline", className: "w-full" })}>
+              <AlarmClock className="text-destructive" aria-hidden />
               Ver {pluralize(stats.overdue, "tarefa atrasada", "tarefas atrasadas")}
             </Link>
           ) : null}

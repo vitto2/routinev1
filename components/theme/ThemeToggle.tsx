@@ -19,35 +19,33 @@ export function ThemeToggle() {
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">Aparência</p>
-      <div
-        role="radiogroup"
-        aria-label="Aparência"
-        className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-muted p-1"
-      >
-        {OPTIONS.map(({ value, label, icon: Icon }) => {
-          const active = mounted && theme === value;
-          return (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => setTheme(value)}
-              className={cn(
-                "flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-medium transition-[background-color,color,box-shadow] duration-200",
-                active
-                  ? "bg-card text-foreground shadow-sm ring-1 ring-border"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Icon className="size-4" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
+    <div
+      role="radiogroup"
+      aria-label="Aparência"
+      data-ui="segmented-switch"
+      className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-muted p-1"
+    >
+      {OPTIONS.map(({ value, label, icon: Icon }) => {
+        const active = mounted && theme === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => setTheme(value)}
+            className={cn(
+              "flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-[background-color,color,box-shadow] duration-200",
+              active
+                ? "bg-card text-foreground shadow-sm ring-1 ring-border"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-4" aria-hidden />
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }

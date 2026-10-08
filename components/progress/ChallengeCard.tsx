@@ -2,7 +2,10 @@ import { CalendarClock, PartyPopper, Trophy } from "lucide-react";
 import { formatDisplayDate } from "@/lib/dates";
 import { pluralize } from "@/lib/format";
 import { CHALLENGE_SUCCESS_THRESHOLD, type ChallengeInfo } from "@/lib/challenges";
+import { cn } from "@/lib/utils";
 import { ChallengeActions } from "@/components/progress/ChallengeActions";
+import { CardHeading, HeadingValue } from "@/components/ui/panel";
+import { surfaceVariants } from "@/components/ui/surface";
 
 const pct = (value: number) => Math.round(value * 100);
 
@@ -20,46 +23,35 @@ export function ChallengeCard({
 }) {
   const elapsed = info.status === "upcoming" ? 0 : (info.dayNumber / info.totalDays) * 100;
   const finished = info.status === "finished";
+  const won = finished && info.successful;
+  const Icon = won ? PartyPopper : info.status === "upcoming" ? CalendarClock : Trophy;
 
   return (
     <article
+      data-ui="challenge-card"
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
       aria-label={`Desafio: ${name}`}
-      className={
-        finished && info.successful
-          ? "animate-rise space-y-3 rounded-2xl border border-success/40 bg-success/10 p-4 shadow-sm"
-          : "animate-rise space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
-      }
+      className={cn(surfaceVariants({ tone: won ? "success" : "card" }), "animate-rise space-y-3")}
     >
-      <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          {finished && info.successful ? (
-            <PartyPopper className="size-5" aria-hidden />
-          ) : info.status === "upcoming" ? (
-            <CalendarClock className="size-5" aria-hidden />
-          ) : (
-            <Trophy className="size-5" aria-hidden />
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold">{name}</h3>
-          <p className="text-sm text-muted-foreground">
-            {info.status === "upcoming"
-              ? `Começa em ${formatDisplayDate(info.startDate)} (${info.totalDays} dias)`
-              : finished
-                ? info.successful
-                  ? "Desafio concluído. Parabéns!"
-                  : "Desafio encerrado"
-                : `Dia ${info.dayNumber} de ${info.totalDays} · ${pluralize(info.daysLeft, "dia restante", "dias restantes")}`}
-          </p>
-        </div>
-        {info.percent !== null ? (
-          <p className="text-xl font-bold tabular-nums">{pct(info.percent)}%</p>
-        ) : null}
-      </div>
+      <CardHeading
+        as="h3"
+        align="center"
+        icon={Icon}
+        title={name}
+        description={
+          info.status === "upcoming"
+            ? `Começa em ${formatDisplayDate(info.startDate)} (${info.totalDays} dias)`
+            : finished
+              ? info.successful
+                ? "Desafio concluído. Parabéns!"
+                : "Desafio encerrado"
+              : `Dia ${info.dayNumber} de ${info.totalDays} · ${pluralize(info.daysLeft, "dia restante", "dias restantes")}`
+        }
+        aside={info.percent !== null ? <HeadingValue>{pct(info.percent)}%</HeadingValue> : undefined}
+      />
 
       <div
-        className="h-2.5 w-full overflow-hidden rounded-full bg-muted"
+        className="h-2 w-full overflow-hidden rounded-full bg-muted"
         role="progressbar"
         aria-label={`Tempo do desafio: ${name}`}
         aria-valuenow={Math.round(elapsed)}
@@ -67,11 +59,10 @@ export function ChallengeCard({
         aria-valuemax={100}
       >
         <div
-          className={
-            finished && info.successful
-              ? "h-full rounded-full bg-success transition-[width] duration-500"
-              : "h-full rounded-full bg-primary transition-[width] duration-500"
-          }
+          className={cn(
+            "h-full rounded-full transition-[width] duration-500",
+            won ? "bg-success" : "bg-primary",
+          )}
           style={{ width: `${elapsed}%` }}
         />
       </div>

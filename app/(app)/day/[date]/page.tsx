@@ -23,6 +23,10 @@ import { HabitListItem } from "@/components/habits/HabitListItem";
 import { TaskListItem } from "@/components/tasks/TaskListItem";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { ScoreCard } from "@/components/progress/ScoreCard";
+import { buttonVariants } from "@/components/ui/button";
+import { IconLink, IconLinkOff } from "@/components/ui/icon-button";
+import { Notice } from "@/components/ui/notice";
+import { SectionTitle } from "@/components/ui/section-title";
 import type { HabitLog } from "@/types/domain";
 
 function capitalize(text: string) {
@@ -73,27 +77,18 @@ export default async function DayPage({
   const hasNext = !isToday;
   const weekdayName = capitalize(WEEKDAY_NAMES[weekdayOf(date)]);
 
-  const navClass =
-    "flex size-10 shrink-0 items-center justify-center rounded-full border border-input bg-card text-foreground transition-colors hover:bg-accent";
-  const navDisabledClass =
-    "flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground/50";
-
   return (
     <div className="space-y-6">
       <header className="space-y-3">
         <div className="flex items-center gap-2">
           {hasPrevious ? (
-            <Link
+            <IconLink
               href={`/day/${previousDay}`}
-              className={navClass}
-              aria-label={`Dia anterior, ${formatDisplayDate(previousDay)}`}
-            >
-              <ChevronLeft className="size-5" />
-            </Link>
+              icon={ChevronLeft}
+              label={`Dia anterior, ${formatDisplayDate(previousDay)}`}
+            />
           ) : (
-            <span className={navDisabledClass} aria-hidden>
-              <ChevronLeft className="size-5" />
-            </span>
+            <IconLinkOff icon={ChevronLeft} />
           )}
           <div className="min-w-0 flex-1 text-center">
             <h1 className="text-xl font-bold tracking-tight">{weekdayName}</h1>
@@ -103,33 +98,23 @@ export default async function DayPage({
             </p>
           </div>
           {hasNext ? (
-            <Link
+            <IconLink
               href={`/day/${nextDay}`}
-              className={navClass}
-              aria-label={`Próximo dia, ${formatDisplayDate(nextDay)}`}
-            >
-              <ChevronRight className="size-5" />
-            </Link>
+              icon={ChevronRight}
+              label={`Próximo dia, ${formatDisplayDate(nextDay)}`}
+            />
           ) : (
-            <span className={navDisabledClass} aria-hidden>
-              <ChevronRight className="size-5" />
-            </span>
+            <IconLinkOff icon={ChevronRight} />
           )}
         </div>
 
-        <div className="flex flex-wrap justify-center gap-2 text-xs">
-          <Link
-            href="/week"
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-input bg-card px-3 font-medium hover:bg-accent"
-          >
-            <CalendarDays className="size-3.5" />
+        <div className="flex flex-wrap justify-center gap-2">
+          <Link href="/week" className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <CalendarDays aria-hidden />
             Semana
           </Link>
           {!isToday ? (
-            <Link
-              href="/today"
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-input bg-card px-3 font-medium hover:bg-accent"
-            >
+            <Link href="/today" className={buttonVariants({ variant: "outline", size: "sm" })}>
               Voltar para hoje
             </Link>
           ) : null}
@@ -137,11 +122,12 @@ export default async function DayPage({
       </header>
 
       {!isToday ? (
-        <p className="flex items-start gap-2 rounded-xl bg-muted px-3 py-2.5 text-sm text-muted-foreground">
-          <History className="mt-0.5 size-4 shrink-0" />
-          Você está vendo um dia passado. Pode marcar o que esqueceu ou corrigir um registro: seus
-          scores e sequências são atualizados.
-        </p>
+        <Notice icon={History}>
+          <p className="text-muted-foreground">
+            Você está vendo um dia passado. Pode marcar o que esqueceu ou corrigir um registro:
+            seus scores e sequências são atualizados.
+          </p>
+        </Notice>
       ) : null}
 
       <ScoreCard
@@ -154,9 +140,7 @@ export default async function DayPage({
       />
 
       <section className="space-y-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          Hábitos
-        </h2>
+        <SectionTitle>Hábitos</SectionTitle>
         {dayHabits.length === 0 ? (
           <EmptyState icon={Repeat} title="Nenhum hábito programado neste dia." />
         ) : (
@@ -188,16 +172,17 @@ export default async function DayPage({
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Tarefas
-          </h2>
-          {tasks.length > 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {tasksDone}/{tasks.length}
-            </span>
-          ) : null}
-        </div>
+        <SectionTitle
+          aside={
+            tasks.length > 0 ? (
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                {tasksDone}/{tasks.length}
+              </span>
+            ) : undefined
+          }
+        >
+          Tarefas
+        </SectionTitle>
         {tasks.length === 0 ? (
           <EmptyState icon={ListChecks} title="Nenhuma tarefa neste dia." />
         ) : (

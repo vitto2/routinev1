@@ -12,7 +12,7 @@ function TrendNote({ trend, period }: { trend: Trend; period: "semana" | "mês" 
   if (trend.direction === "unknown") {
     return (
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Minus className="size-3.5" aria-hidden />
+        <Minus className="size-3.5 shrink-0" aria-hidden />
         Dados insuficientes para uma tendência
       </p>
     );
@@ -20,7 +20,7 @@ function TrendNote({ trend, period }: { trend: Trend; period: "semana" | "mês" 
   if (trend.direction === "flat") {
     return (
       <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-        <Minus className="size-3.5 text-muted-foreground" aria-hidden />
+        <Minus className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
         Estável
       </p>
     );
@@ -28,14 +28,14 @@ function TrendNote({ trend, period }: { trend: Trend; period: "semana" | "mês" 
   if (trend.direction === "up") {
     return (
       <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-        <TrendingUp className="size-3.5 text-success" aria-hidden />
+        <TrendingUp className="size-3.5 shrink-0 text-success" aria-hidden />
         Em alta: +{abs} {pointsWord} {per}
       </p>
     );
   }
   return (
     <p className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-      <TrendingDown className="size-3.5 text-warning" aria-hidden />
+      <TrendingDown className="size-3.5 shrink-0 text-warning" aria-hidden />
       Em queda: -{abs} {pointsWord} {per}
     </p>
   );
@@ -80,7 +80,7 @@ export function BarChart({
                   className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
                   title={`${p.detail}: ${p.percent === null ? "sem hábitos programados" : `${pct(p.percent)}%`}`}
                 >
-                  <span className="text-[11px] font-semibold tabular-nums leading-none">
+                  <span className="text-xs font-semibold tabular-nums leading-none">
                     {p.percent === null ? "—" : `${pct(p.percent)}%`}
                   </span>
                   <div className="flex h-28 w-full items-end">
@@ -108,7 +108,7 @@ export function BarChart({
                 <span
                   key={p.key}
                   className={cn(
-                    "min-w-0 flex-1 truncate text-center text-[11px] text-muted-foreground",
+                    "min-w-0 flex-1 truncate text-center text-xs text-muted-foreground",
                     p.partial && "font-semibold text-foreground",
                   )}
                 >

@@ -22,6 +22,8 @@ import {
 } from "@/lib/constants/appearance";
 import { HabitNoteDialog } from "@/components/habits/HabitNoteDialog";
 import { StreakBadge } from "@/components/habits/StreakBadge";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { surfaceVariants } from "@/components/ui/surface";
 import type { HabitLog, HabitWithSchedules } from "@/types/domain";
 
 const QUICK_INCREMENTS: Record<string, number[]> = {
@@ -57,21 +59,32 @@ export interface StreakView {
 function CheckCircle({ done, color }: { done: boolean; color: string }) {
   return (
     <span
+      data-ui="check"
       className={cn(
         "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
         done ? "animate-check border-transparent" : "border-input bg-card",
       )}
       style={done ? { backgroundColor: color, color: readableOn(color) } : undefined}
     >
-      {done ? <Check className="size-[18px]" strokeWidth={3} /> : null}
+      {done ? <Check className="size-4" strokeWidth={3} /> : null}
     </span>
   );
 }
 
-function NoteButton({ hasNote, onClick }: { hasNote: boolean; onClick: () => void }) {
+/** Botão de nota: 40 x 40 px com glifo de 20 px, igual a todo botão só de ícone do app. */
+function NoteButton({
+  hasNote,
+  onClick,
+  className,
+}: {
+  hasNote: boolean;
+  onClick: () => void;
+  className?: string;
+}) {
   return (
     <button
       type="button"
+      data-ui="icon-button"
       onClick={onClick}
       aria-label={hasNote ? "Editar nota" : "Adicionar nota"}
       className={cn(
@@ -79,11 +92,12 @@ function NoteButton({ hasNote, onClick }: { hasNote: boolean; onClick: () => voi
         hasNote
           ? "bg-primary/10 text-primary hover:bg-primary/15"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
+        className,
       )}
     >
-      <NotebookPen className="size-4" />
+      <NotebookPen className="size-5" />
       {hasNote ? (
-        <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary" aria-hidden />
+        <span className="absolute right-2 top-2 size-2 rounded-full bg-primary" aria-hidden />
       ) : null}
     </button>
   );
@@ -204,15 +218,8 @@ export function HabitListItem({
   }
 
   const delay = { animationDelay: `${Math.min(index, 8) * 40}ms` };
-  const bubble = Icon ? (
-    <span
-      className="flex size-9 shrink-0 items-center justify-center rounded-xl"
-      style={accent.bubble}
-      aria-hidden
-    >
-      <Icon className="size-[18px]" />
-    </span>
-  ) : null;
+  // Sempre presente (com um ponto quando não há ícone), para as linhas ficarem alinhadas.
+  const bubble = <IconBadge icon={Icon} size="sm" accent={accentColor} />;
 
   const noteDialog = (
     <HabitNoteDialog
@@ -232,163 +239,154 @@ export function HabitListItem({
   }
   if (challenge) extras.push(<ChallengeBadge day={challenge.day} total={challenge.total} />);
 
-  if (habit.tracking_type === "quantity" || habit.tracking_type === "time") {
-    return (
-      <div style={delay} className="animate-rise">
-        <ProgressHabitRow
-          habit={habit}
-          value={state.value}
-          completed={state.completed}
-          onChange={(next) => commitValue(next, state.value, true)}
-          color={accentColor}
-          bubble={bubble}
-          extras={extras}
-          note={
-            <NoteButton hasNote={Boolean(note)} onClick={() => setNoteOpen(true)} />
-          }
-        />
-        {noteOpen ? noteDialog : null}
-      </div>
-    );
-  }
-
+  const isProgress = habit.tracking_type === "quantity" || habit.tracking_type === "time";
   const isAvoid = habit.habit_type === "avoid";
-  const subtitleParts: React.ReactNode[] = [];
-  if (isAvoid) {
-    subtitleParts.push(state.completed ? "Consegui evitar hoje" : "Hábito a evitar");
-  } else if (weekProgress) {
-    subtitleParts.push(`${weekProgress.done}/${weekProgress.target} nesta semana`);
+
+  // Linhas de detalhe sob o nome (a mesma estrutura nos dois tipos de cartão).
+  const metaParts: React.ReactNode[] = [];
+  if (!isProgress) {
+    if (isAvoid) {
+      metaParts.push(state.completed ? "Consegui evitar hoje" : "Hábito a evitar");
+    } else if (weekProgress) {
+      metaParts.push(`${weekProgress.done}/${weekProgress.target} nesta semana`);
+    }
   }
-  subtitleParts.push(...extras);
+  metaParts.push(...extras);
+
+  const body = (
+    <>
+      <CheckCircle done={state.completed} color={accentColor} />
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            "block truncate font-medium leading-snug transition-colors duration-200",
+            !isProgress && state.completed && "text-muted-foreground line-through decoration-1",
+          )}
+        >
+          {habit.name}
+        </span>
+        {metaParts.length > 0 ? (
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+            {metaParts.map((part, i) => (
+              <span key={i}>{part}</span>
+            ))}
+          </span>
+        ) : null}
+      </span>
+      {bubble}
+    </>
+  );
 
   return (
-    <div style={delay} className="animate-rise flex items-center gap-1.5">
-      <button
-        type="button"
-        onClick={() => commitCompletion(!state.completed, true)}
-        aria-pressed={state.completed}
-        style={state.completed ? accent.soft : undefined}
-        className={cn(
-          "flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left shadow-sm transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
-          state.completed ? "border-transparent" : "border-border hover:bg-accent/40",
-        )}
-      >
-        <CheckCircle done={state.completed} color={accentColor} />
-        <span className="min-w-0 flex-1">
-          <span
-            className={cn(
-              "block truncate font-medium transition-colors duration-200",
-              state.completed && "text-muted-foreground line-through decoration-1",
-            )}
+    <div
+      data-ui="habit-row"
+      style={{ ...delay, ...(state.completed ? accent.soft : undefined) }}
+      className={cn(
+        surfaceVariants({ padding: "none" }),
+        "animate-rise transition-colors duration-200",
+        state.completed && "border-transparent",
+      )}
+    >
+      {/* Cabeçalho idêntico nos dois tipos: [check 32] [nome e detalhes] [ícone 32] [nota 40] */}
+      <div className="flex min-h-16 items-center">
+        {isProgress ? (
+          <div className="flex min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-2">{body}</div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => commitCompletion(!state.completed, true)}
+            aria-pressed={state.completed}
+            className="flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-l-2xl py-3 pl-4 pr-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 active:bg-accent/60"
           >
-            {habit.name}
-          </span>
-          {subtitleParts.length > 0 ? (
-            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              {subtitleParts.map((part, i) => (
-                <span key={i}>{part}</span>
-              ))}
-            </span>
-          ) : null}
-        </span>
-        {bubble}
-      </button>
-      <NoteButton hasNote={Boolean(note)} onClick={() => setNoteOpen(true)} />
+            {body}
+          </button>
+        )}
+        <NoteButton className="mr-2" hasNote={Boolean(note)} onClick={() => setNoteOpen(true)} />
+      </div>
+
+      {isProgress ? (
+        <ProgressControls
+          habit={habit}
+          value={state.value}
+          color={accentColor}
+          onChange={(next) => commitValue(next, state.value, true)}
+        />
+      ) : null}
+
       {noteOpen ? noteDialog : null}
     </div>
   );
 }
 
-function ProgressHabitRow({
+/** Barra de progresso e botões de soma/subtração dos hábitos de quantidade e tempo. */
+function ProgressControls({
   habit,
   value,
-  completed,
-  onChange,
   color,
-  bubble,
-  extras,
-  note,
+  onChange,
 }: {
   habit: HabitWithSchedules;
   value: number;
-  completed: boolean;
-  onChange: (next: number) => void;
   color: string;
-  bubble: React.ReactNode;
-  extras: React.ReactNode[];
-  note: React.ReactNode;
+  onChange: (next: number) => void;
 }) {
   const target = habit.target_value ?? 0;
   const unit = habit.target_unit ?? "";
   const increments = QUICK_INCREMENTS[unit] ?? [1, 5];
   const percent = target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0;
-  const accent = accentStyles(color);
 
   return (
-    <div
-      style={completed ? accent.soft : undefined}
-      className={cn(
-        "rounded-2xl border bg-card px-4 py-3.5 shadow-sm transition-colors duration-200",
-        completed ? "border-transparent" : "border-border",
-      )}
-    >
+    <div className="space-y-3 px-4 pb-4">
+      {/* Barra e valor na mesma linha: o número nunca quebra em duas linhas. */}
       <div className="flex items-center gap-3">
-        <CheckCircle done={completed} color={color} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium">{habit.name}</span>
-          {extras.length > 0 ? (
-            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              {extras.map((extra, i) => (
-                <span key={i}>{extra}</span>
-              ))}
-            </span>
-          ) : null}
-        </span>
-        <span className="text-sm font-medium tabular-nums text-muted-foreground">
+        <div
+          className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted"
+          role="progressbar"
+          aria-label={`Progresso de ${habit.name}`}
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full rounded-full transition-[width] duration-300 ease-out"
+            style={{ width: `${percent}%`, backgroundColor: color }}
+          />
+        </div>
+        <span className="shrink-0 whitespace-nowrap text-sm font-medium tabular-nums text-muted-foreground">
           {value}
           {target ? `/${target}` : ""} {unit}
         </span>
-        {bubble}
       </div>
-      <div
-        className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted"
-        role="progressbar"
-        aria-label={`Progresso de ${habit.name}`}
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className="h-full rounded-full transition-[width] duration-300 ease-out"
-          style={{ width: `${percent}%`, backgroundColor: color }}
-        />
-      </div>
-      <div className="mt-3 flex items-center gap-2">
+
+      <div className="flex items-center gap-2">
         {increments.map((inc) => (
           <button
             key={inc}
             type="button"
             onClick={() => onChange(value + inc)}
-            className="flex min-h-10 items-center gap-1 rounded-full border border-input bg-card px-3.5 text-sm font-medium transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
+            className="flex h-10 items-center gap-1.5 rounded-full border border-input bg-card px-3.5 text-sm font-medium transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" aria-hidden />
             {inc}
             {unit}
           </button>
         ))}
-        <span className="ml-auto flex items-center gap-1">
-          {value > 0 ? (
-            <button
-              type="button"
-              onClick={() => onChange(Math.max(0, value - (increments[0] ?? 1)))}
-              className="flex size-10 items-center justify-center rounded-full border border-input bg-card text-muted-foreground transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
-              aria-label={`Remover ${increments[0]} ${unit}`}
-            >
-              <Minus className="size-4" />
-            </button>
-          ) : null}
-          {note}
-        </span>
+
+        {/* Sempre ocupa o lugar: o resto da linha não "pula" quando o botão aparece. */}
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(0, value - (increments[0] ?? 1)))}
+          disabled={value <= 0}
+          tabIndex={value > 0 ? 0 : -1}
+          aria-hidden={value <= 0}
+          aria-label={`Remover ${increments[0]} ${unit}`}
+          className={cn(
+            "ml-auto flex size-10 shrink-0 items-center justify-center rounded-full border border-input bg-card text-muted-foreground transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95",
+            value <= 0 && "invisible",
+          )}
+        >
+          <Minus className="size-5" aria-hidden />
+        </button>
       </div>
     </div>
   );

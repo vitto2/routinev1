@@ -10,6 +10,8 @@ import { isScheduledOn } from "@/lib/scheduling";
 import { weeklyScore } from "@/lib/scoring";
 import { WeekGrid } from "@/components/progress/WeekGrid";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { buttonVariants } from "@/components/ui/button";
+import { Surface } from "@/components/ui/surface";
 
 export default async function WeekPage() {
   const { user } = await requireUser();
@@ -43,7 +45,7 @@ export default async function WeekPage() {
         <h1 className="text-2xl font-bold tracking-tight">Sua semana</h1>
       </header>
 
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <Surface data-ui="score-card">
         <div className="flex items-end justify-between">
           <p className="text-sm font-medium text-muted-foreground">Consistência da semana</p>
           <p className="text-3xl font-bold tabular-nums">
@@ -55,21 +57,15 @@ export default async function WeekPage() {
             Semana anterior: {Math.round(previousScore.percent * 100)}%
           </p>
         ) : null}
-      </div>
+      </Surface>
 
       <div className="grid grid-cols-2 gap-2">
-        <Link
-          href="/review"
-          className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-input bg-card px-3 text-sm font-medium transition-colors hover:bg-accent"
-        >
-          <ClipboardList className="size-4 text-primary" aria-hidden />
+        <Link href="/review" className={buttonVariants({ variant: "outline", size: "lg" })}>
+          <ClipboardList className="text-primary" aria-hidden />
           Revisão
         </Link>
-        <Link
-          href="/progress/calendar"
-          className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-input bg-card px-3 text-sm font-medium transition-colors hover:bg-accent"
-        >
-          <CalendarDays className="size-4 text-primary" aria-hidden />
+        <Link href="/progress/calendar" className={buttonVariants({ variant: "outline", size: "lg" })}>
+          <CalendarDays className="text-primary" aria-hidden />
           Calendário
         </Link>
       </div>

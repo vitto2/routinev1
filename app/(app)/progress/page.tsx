@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, ChevronRight, ClipboardList, Flame, Repeat } from "lucide-react";
+import { CalendarDays, ClipboardList, Flame, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateProfile } from "@/lib/data/profile";
@@ -37,6 +37,10 @@ import { PeriodSummary } from "@/components/progress/PeriodSummary";
 import { PeriodSwitch, parsePeriod } from "@/components/progress/PeriodSwitch";
 import { TaskSummaryCard } from "@/components/progress/TaskSummaryCard";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { ListRow, RowChevron } from "@/components/ui/list-row";
+import { Panel } from "@/components/ui/panel";
+import { SectionTitle } from "@/components/ui/section-title";
 import type { HabitLog } from "@/types/domain";
 
 /** Janela de leitura: cobre sequências (400 dias), o período (até 60 dias x2) e os 6 meses do gráfico. */
@@ -140,15 +144,13 @@ export default async function ProgressPage({
       </header>
 
       {highlight ? (
-        <div className="animate-rise flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Flame className="size-5" />
-          </span>
-          <div>
-            <p className="font-semibold">{highlight.title}</p>
-            <p className="text-sm text-muted-foreground">{highlight.text}</p>
-          </div>
-        </div>
+        <Panel
+          icon={Flame}
+          tone="solid"
+          title={highlight.title}
+          description={highlight.text}
+          className="animate-rise border-primary/30 bg-primary/10"
+        />
       ) : null}
 
       <PeriodSummary
@@ -165,12 +167,7 @@ export default async function ProgressPage({
 
       {challenges.length > 0 ? (
         <section className="space-y-3" aria-labelledby="challenges-heading">
-          <h2
-            id="challenges-heading"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            Desafios
-          </h2>
+          <SectionTitle id="challenges-heading">Desafios</SectionTitle>
           <div className="space-y-3">
             {challenges.map(({ habit, info }, i) => (
               <ChallengeCard key={habit.id} habitId={habit.id} name={habit.name} info={info} index={i} />
@@ -181,12 +178,7 @@ export default async function ProgressPage({
 
       <section className="space-y-3" aria-labelledby="habits-heading">
         <div className="space-y-2">
-          <h2
-            id="habits-heading"
-            className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >
-            Hábitos nos {periodLabel}
-          </h2>
+          <SectionTitle id="habits-heading">Hábitos nos {periodLabel}</SectionTitle>
           {habitStats.length > 0 ? <DayStripLegend /> : null}
         </div>
 
@@ -237,12 +229,7 @@ export default async function ProgressPage({
       <TaskSummaryCard stats={taskSummary} periodLabel={periodLabel} />
 
       <section className="space-y-3" aria-labelledby="evolution-heading">
-        <h2
-          id="evolution-heading"
-          className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >
-          Evolução
-        </h2>
+        <SectionTitle id="evolution-heading">Evolução</SectionTitle>
         <BarChart
           title="Consistência por semana"
           points={weekly}
@@ -257,18 +244,20 @@ export default async function ProgressPage({
         />
       </section>
 
-      <div className="grid gap-2">
-        <NavCard
+      <div className="space-y-2">
+        <ListRow
           href="/progress/calendar"
-          icon={<CalendarDays className="size-5" />}
+          leading={<IconBadge icon={CalendarDays} />}
           title="Calendário"
-          text="Veja o desempenho de cada dia do mês"
+          subtitle="Veja o desempenho de cada dia do mês"
+          trailing={<RowChevron />}
         />
-        <NavCard
+        <ListRow
           href="/review"
-          icon={<ClipboardList className="size-5" />}
+          leading={<IconBadge icon={ClipboardList} />}
           title="Revisão da semana"
-          text="Melhor dia, hábito mais difícil e sugestões"
+          subtitle="Melhor dia, hábito mais difícil e sugestões"
+          trailing={<RowChevron />}
         />
       </div>
 
@@ -284,30 +273,3 @@ export default async function ProgressPage({
   );
 }
 
-function NavCard({
-  href,
-  icon,
-  title,
-  text,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/40"
-    >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-semibold">{title}</span>
-        <span className="block text-xs text-muted-foreground">{text}</span>
-      </span>
-      <ChevronRight className="size-4 text-muted-foreground" />
-    </Link>
-  );
-}

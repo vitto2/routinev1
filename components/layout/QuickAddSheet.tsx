@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, ListChecks, Repeat, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { surfaceVariants } from "@/components/ui/surface";
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -30,7 +33,7 @@ export function QuickAddSheet({ today }: { today: string }) {
             />
           }
         >
-          <Plus className="size-6" />
+          <Plus className="size-6" aria-hidden />
         </SheetTrigger>
         <SheetContent side="bottom">
           <SheetHeader>
@@ -82,9 +85,12 @@ function QuickAddOption({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 text-sm font-semibold transition-[transform,background-color] duration-150 hover:bg-accent active:scale-95"
+      className={cn(
+        surfaceVariants({ padding: "md", interactive: true }),
+        "flex min-h-24 flex-col items-center justify-center gap-2 text-sm font-semibold transition-[transform,background-color] duration-150 active:scale-95",
+      )}
     >
-      <Icon className="size-5" />
+      <IconBadge icon={Icon} />
       {label}
     </button>
   );

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:db": "node scripts/check-db.mjs",
+    "check:ui": "node scripts/check-ui.mjs",
     "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {

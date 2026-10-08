@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { surfaceVariants } from "@/components/ui/surface";
 
 const PIECES = [
   { dx: -70, dy: -60, rot: 200, color: "#6366f1" },
@@ -46,9 +47,10 @@ export function ScoreCard({
   return (
     <div
       key={burst > 0 ? `burst-${burst}` : "card"}
+      data-ui="score-card"
       className={cn(
-        "relative rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors duration-300",
-        complete && "border-success/40 bg-success/10",
+        surfaceVariants({ tone: complete ? "success" : "card" }),
+        "relative transition-colors duration-300",
         burst > 0 && "animate-ring",
       )}
     >

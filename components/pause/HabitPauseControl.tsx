@@ -4,8 +4,11 @@ import { useState } from "react";
 import { PauseCircle } from "lucide-react";
 import { formatDisplayDate } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { surfaceVariants } from "@/components/ui/surface";
 import { PauseDialog } from "@/components/pause/PauseDialog";
 import { ResumeButton } from "@/components/pause/ResumeButton";
+import { cn } from "@/lib/utils";
 
 /** Na edição do hábito: pausar só este hábito ou retomá-lo. */
 export function HabitPauseControl({
@@ -24,10 +27,13 @@ export function HabitPauseControl({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
-      <PauseCircle className="size-5 text-warning" aria-hidden />
+    <div
+      data-ui="habit-pause-control"
+      className={cn(surfaceVariants({ padding: "row" }), "flex min-h-16 items-center gap-3")}
+    >
+      <IconBadge icon={PauseCircle} tone="warning" />
       <div className="min-w-0 flex-1 text-sm">
-        <p className="font-medium">{paused ? "Hábito em pausa" : "Pausa"}</p>
+        <p className="font-medium leading-snug">{paused ? "Hábito em pausa" : "Pausa"}</p>
         <p className="text-muted-foreground">
           {paused
             ? resumesOn

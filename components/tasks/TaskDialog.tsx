@@ -6,8 +6,8 @@ import { createTask, updateTask } from "@/lib/actions/tasks";
 import { focusFirstInvalid, useFormErrors } from "@/lib/forms";
 import { taskSchema } from "@/lib/validation/task";
 import { addDaysISO, formatDisplayDate } from "@/lib/dates";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Field } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
@@ -22,32 +22,6 @@ import {
 import type { Task } from "@/types/domain";
 
 type Priority = "low" | "medium" | "high";
-
-function DateChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "min-h-10 rounded-full border px-3.5 text-sm font-medium transition-[background-color,border-color,transform] duration-150 active:scale-95",
-        active
-          ? "border-primary bg-primary/10 text-primary"
-          : "border-input bg-card text-foreground hover:bg-accent",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 function TaskForm({
   task,
@@ -126,15 +100,15 @@ function TaskForm({
         {(props) => (
           <div className="space-y-2.5">
             <div className="flex flex-wrap gap-2" role="group" aria-label="Atalhos de data">
-              <DateChip active={dueDate === today} onClick={() => { setDueDate(today); clear("due_date"); }}>
+              <Chip active={dueDate === today} onClick={() => { setDueDate(today); clear("due_date"); }}>
                 Hoje
-              </DateChip>
-              <DateChip active={dueDate === tomorrow} onClick={() => { setDueDate(tomorrow); clear("due_date"); }}>
+              </Chip>
+              <Chip active={dueDate === tomorrow} onClick={() => { setDueDate(tomorrow); clear("due_date"); }}>
                 Amanhã
-              </DateChip>
-              <DateChip active={dueDate === nextWeek} onClick={() => { setDueDate(nextWeek); clear("due_date"); }}>
+              </Chip>
+              <Chip active={dueDate === nextWeek} onClick={() => { setDueDate(nextWeek); clear("due_date"); }}>
                 Em 1 semana
-              </DateChip>
+              </Chip>
             </div>
             <Input
               {...props}

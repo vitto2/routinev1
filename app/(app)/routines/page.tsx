@@ -1,13 +1,24 @@
 import Link from "next/link";
-import { ChevronRight, Layers3, Plus } from "lucide-react";
+import { Clock3, Layers3, Moon, Plus, Sun, Sunrise, type LucideIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { getOrCreateProfile, hasSchemaV2 } from "@/lib/data/profile";
 import { getHabitsWithSchedules } from "@/lib/data/habits";
 import { getRoutines } from "@/lib/data/routines";
 import { PERIOD_BY_VALUE } from "@/lib/constants/routines";
+import type { RoutinePeriod } from "@/types/database.types";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { buttonVariants } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { ListRow, RowChevron } from "@/components/ui/list-row";
+
+/** Mesmos ícones do cabeçalho da rotina na tela Hoje. */
+const PERIOD_ICONS: Record<RoutinePeriod, LucideIcon> = {
+  morning: Sunrise,
+  afternoon: Sun,
+  evening: Moon,
+  custom: Clock3,
+};
 
 export default async function RoutinesPage() {
   const { supabase, user } = await requireUser();
@@ -46,16 +57,16 @@ export default async function RoutinesPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between gap-2">
-        <PageHeader title="Rotinas" backHref="/profile" />
-        <Link
-          href="/routines/new"
-          className={buttonVariants({ size: "sm", variant: "outline", className: "mb-6" })}
-        >
-          <Plus className="size-4" />
-          Nova
-        </Link>
-      </div>
+      <PageHeader
+        title="Rotinas"
+        backHref="/profile"
+        action={
+          <Link href="/routines/new" className={buttonVariants({ size: "sm", variant: "outline" })}>
+            <Plus aria-hidden />
+            Nova
+          </Link>
+        }
+      />
 
       {ordered.length === 0 ? (
         <EmptyState
@@ -70,21 +81,16 @@ export default async function RoutinesPage() {
           {ordered.map((routine, i) => {
             const count = countByRoutine.get(routine.id) ?? 0;
             return (
-              <Link
+              <ListRow
                 key={routine.id}
                 href={`/routines/${routine.id}`}
                 style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
-                className="animate-rise flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/40"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{routine.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {PERIOD_BY_VALUE[routine.period].label} ·{" "}
-                    {count === 1 ? "1 hábito" : `${count} hábitos`}
-                  </p>
-                </div>
-                <ChevronRight className="size-4 text-muted-foreground" />
-              </Link>
+                className="animate-rise"
+                leading={<IconBadge icon={PERIOD_ICONS[routine.period]} />}
+                title={routine.name}
+                subtitle={`${PERIOD_BY_VALUE[routine.period].label} · ${count === 1 ? "1 hábito" : `${count} hábitos`}`}
+                trailing={<RowChevron />}
+              />
             );
           })}
         </div>

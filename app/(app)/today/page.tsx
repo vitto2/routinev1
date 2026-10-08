@@ -23,6 +23,7 @@ import { HabitListItem } from "@/components/habits/HabitListItem";
 import { TaskListItem } from "@/components/tasks/TaskListItem";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { ScoreCard } from "@/components/progress/ScoreCard";
+import { SectionTitle } from "@/components/ui/section-title";
 import type { HabitLog, HabitWithSchedules } from "@/types/domain";
 
 /** Quantas tarefas atrasadas aparecem de cara; o resto fica atrás de "Ver mais". */
@@ -132,9 +133,7 @@ export default async function TodayPage() {
       {paused.length > 0 ? <PauseBanner paused={paused} total={activeHabits.length} /> : null}
 
       <section className="space-y-3">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          Hábitos de hoje
-        </h2>
+        <SectionTitle>Hábitos de hoje</SectionTitle>
         {todayHabits.length === 0 ? (
           paused.length > 0 ? (
             <EmptyState
@@ -174,16 +173,17 @@ export default async function TodayPage() {
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Tarefas de hoje
-          </h2>
-          {tasks.length > 0 ? (
-            <span className="text-xs text-muted-foreground">
-              {tasksDone}/{tasks.length}
-            </span>
-          ) : null}
-        </div>
+        <SectionTitle
+          aside={
+            tasks.length > 0 ? (
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                {tasksDone}/{tasks.length}
+              </span>
+            ) : undefined
+          }
+        >
+          Tarefas de hoje
+        </SectionTitle>
         {tasks.length === 0 ? (
           <EmptyState icon={ListChecks} title="Nenhuma tarefa para hoje." />
         ) : (
@@ -198,10 +198,9 @@ export default async function TodayPage() {
       {/* Depois dos hábitos e das tarefas de hoje: uma pilha de atrasadas não pode empurrar o essencial para fora da tela. */}
       {overdue.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wide text-destructive">
-            <AlarmClock className="size-4" />
+          <SectionTitle icon={AlarmClock} tone="danger">
             Atrasadas ({overdue.length})
-          </h2>
+          </SectionTitle>
           <div className="space-y-2">
             {overdue.slice(0, OVERDUE_VISIBLE).map((task, i) => (
               <TaskListItem key={task.id} task={task} today={today} index={i} overdue />
@@ -209,7 +208,7 @@ export default async function TodayPage() {
           </div>
           {overdue.length > OVERDUE_VISIBLE ? (
             <details className="group">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-accent/40 [&::-webkit-details-marker]:hidden">
+              <summary className="flex h-10 cursor-pointer list-none items-center justify-center rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-accent/40 [&::-webkit-details-marker]:hidden">
                 <span className="group-open:hidden">
                   Ver mais {overdue.length - OVERDUE_VISIBLE}
                 </span>

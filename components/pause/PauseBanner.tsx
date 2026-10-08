@@ -1,7 +1,10 @@
 import { PauseCircle } from "lucide-react";
 import { formatDisplayDate } from "@/lib/dates";
 import type { PausedHabit } from "@/lib/scheduling/pause";
+import { cn } from "@/lib/utils";
 import { ResumeButton } from "@/components/pause/ResumeButton";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { surfaceVariants } from "@/components/ui/surface";
 
 /** Faixa do Hoje enquanto houver hábitos em pausa. */
 export function PauseBanner({ paused, total }: { paused: PausedHabit[]; total: number }) {
@@ -9,10 +12,16 @@ export function PauseBanner({ paused, total }: { paused: PausedHabit[]; total: n
   const all = paused.length === total;
 
   return (
-    <div className="animate-rise flex items-center gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4">
-      <PauseCircle className="size-6 shrink-0 text-warning" aria-hidden />
+    <div
+      data-ui="pause-banner"
+      className={cn(
+        surfaceVariants({ tone: "warning", padding: "row" }),
+        "animate-rise flex min-h-16 items-center gap-3",
+      )}
+    >
+      <IconBadge icon={PauseCircle} tone="warning" />
       <div className="min-w-0 flex-1 text-sm">
-        <p className="font-semibold">{all ? "Modo pausa" : "Hábitos em pausa"}</p>
+        <p className="font-semibold leading-snug">{all ? "Modo pausa" : "Hábitos em pausa"}</p>
         <p className="text-foreground/80">
           {all
             ? "Seus hábitos não contam nesses dias."

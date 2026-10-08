@@ -1,4 +1,7 @@
-import { ICONS_BY_NAME, accentStyles } from "@/lib/constants/appearance";
+import { ICONS_BY_NAME } from "@/lib/constants/appearance";
+import { cn } from "@/lib/utils";
+import { CardHeading, HeadingValue } from "@/components/ui/panel";
+import { surfaceVariants } from "@/components/ui/surface";
 import { formatHabitValue, formatNumber, pluralize, relativeDays } from "@/lib/format";
 import { formatStreak } from "@/lib/gamification";
 import { daysSince, type HabitPeriodStats } from "@/lib/progress/period";
@@ -38,7 +41,6 @@ export function HabitPeriodCard({
   index?: number;
 }) {
   const { habit } = stats;
-  const accent = accentStyles(color);
   const Icon = (iconName && ICONS_BY_NAME[iconName]) || Sparkles;
   const percent = stats.score.percent === null ? null : Math.round(stats.score.percent * 100);
   const since = daysSince(stats.lastDone, today);
@@ -51,21 +53,19 @@ export function HabitPeriodCard({
 
   return (
     <article
+      data-ui="habit-period-card"
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-      className="animate-rise space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
+      className={cn(surfaceVariants(), "animate-rise space-y-3")}
       aria-label={habit.name}
     >
-      <div className="flex items-center gap-3">
-        <span
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl"
-          style={accent.bubble}
-          aria-hidden
-        >
-          <Icon className="size-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold">{habit.name}</h3>
-          <p className="text-sm text-muted-foreground">
+      <CardHeading
+        as="h3"
+        align="center"
+        icon={Icon}
+        accent={color ?? null}
+        title={habit.name}
+        description={
+          <>
             {headline}
             {stats.kind === "fixed" && stats.partialDays > 0
               ? ` · ${pluralize(stats.partialDays, "parcial", "parciais")}`
@@ -73,10 +73,10 @@ export function HabitPeriodCard({
             {stats.kind === "fixed" && stats.missed > 0
               ? ` · ${pluralize(stats.missed, "não feita", "não feitas")}`
               : ""}
-          </p>
-        </div>
-        <p className="text-xl font-bold tabular-nums">{percent === null ? "—" : `${percent}%`}</p>
-      </div>
+          </>
+        }
+        aside={<HeadingValue>{percent === null ? "—" : `${percent}%`}</HeadingValue>}
+      />
 
       <DayStrip cells={stats.strip} label={`${habit.name}, ${periodLabel}`} />
 

@@ -28,14 +28,14 @@ export function RoutineHeader({
   const complete = total > 0 && done === total;
 
   return (
-    <div className="flex items-center gap-2 pt-1">
-      <Icon className="size-4 text-primary" aria-hidden />
+    <div data-ui="routine-header" className="flex min-h-6 items-center gap-2">
+      <Icon className="size-4 shrink-0 text-primary" aria-hidden />
       <h3 className="text-sm font-bold">{name}</h3>
       {period ? (
         <span className="text-xs text-muted-foreground">{PERIOD_BY_VALUE[period].label}</span>
       ) : null}
       {isNow ? (
-        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
           Agora
         </span>
       ) : null}

@@ -19,6 +19,9 @@ import {
 import { buildMonthGrid } from "@/lib/progress/calendar";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { MonthCalendar } from "@/components/progress/MonthCalendar";
+import { buttonVariants } from "@/components/ui/button";
+import { IconLink, IconLinkOff } from "@/components/ui/icon-button";
+import { StatTile } from "@/components/ui/stat-tile";
 
 const MAX_MONTHS_BACK = 24;
 
@@ -58,56 +61,41 @@ export default async function CalendarPage({
   const hasPrevious = previous >= oldestMonth;
   const hasNext = month < currentMonth;
 
-  const navClass =
-    "flex size-10 shrink-0 items-center justify-center rounded-full border border-input bg-card transition-colors hover:bg-accent";
-  const navOff =
-    "flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground/50";
-
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader title="Calendário" backHref="/progress" />
 
       <div className="flex items-center gap-2">
         {hasPrevious ? (
-          <Link
+          <IconLink
             href={`/progress/calendar?m=${previous}`}
-            className={navClass}
-            aria-label={`Mês anterior, ${monthLabel(previous)}`}
-          >
-            <ChevronLeft className="size-5" />
-          </Link>
+            icon={ChevronLeft}
+            label={`Mês anterior, ${monthLabel(previous)}`}
+          />
         ) : (
-          <span className={navOff} aria-hidden>
-            <ChevronLeft className="size-5" />
-          </span>
+          <IconLinkOff icon={ChevronLeft} />
         )}
         <h2 className="flex-1 text-center text-lg font-bold" aria-live="polite">
           {capitalize(monthLabel(month))}
         </h2>
         {hasNext ? (
-          <Link
+          <IconLink
             href={`/progress/calendar?m=${next}`}
-            className={navClass}
-            aria-label={`Próximo mês, ${monthLabel(next)}`}
-          >
-            <ChevronRight className="size-5" />
-          </Link>
+            icon={ChevronRight}
+            label={`Próximo mês, ${monthLabel(next)}`}
+          />
         ) : (
-          <span className={navOff} aria-hidden>
-            <ChevronRight className="size-5" />
-          </span>
+          <IconLinkOff icon={ChevronRight} />
         )}
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <Summary
+        <StatTile
           label="Consistência"
-          value={
-            grid.month.percent !== null ? `${Math.round(grid.month.percent * 100)}%` : "—"
-          }
+          value={grid.month.percent !== null ? `${Math.round(grid.month.percent * 100)}%` : "—"}
         />
-        <Summary label="Dias com 100%" value={String(grid.perfectDays)} />
-        <Summary label="Dias com hábitos" value={String(grid.scoredDays)} />
+        <StatTile label="Dias com 100%" value={String(grid.perfectDays)} />
+        <StatTile label="Dias com hábitos" value={String(grid.scoredDays)} />
       </div>
 
       <MonthCalendar month={month} grid={grid} />
@@ -115,20 +103,11 @@ export default async function CalendarPage({
       {month !== currentMonth ? (
         <Link
           href="/progress/calendar"
-          className="inline-flex min-h-10 items-center rounded-full border border-input bg-card px-4 text-sm font-medium hover:bg-accent"
+          className={buttonVariants({ variant: "outline", size: "sm" })}
         >
           Ir para o mês atual
         </Link>
       ) : null}
-    </div>
-  );
-}
-
-function Summary({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-3 text-center shadow-sm">
-      <p className="text-xl font-bold tabular-nums">{value}</p>
-      <p className="text-[11px] leading-tight text-muted-foreground">{label}</p>
     </div>
   );
 }

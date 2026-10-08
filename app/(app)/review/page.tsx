@@ -9,6 +9,7 @@ import {
   Sparkles,
   Trophy,
   TrendingDown,
+  type LucideIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { pointsLabel } from "@/lib/format";
@@ -28,7 +29,12 @@ import {
 import { buildWeeklyReview, describeWeek, type SuggestionKind } from "@/lib/progress/review";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ScoreCard } from "@/components/progress/ScoreCard";
-import { cn } from "@/lib/utils";
+import type { IconBadgeTone } from "@/components/ui/icon-badge";
+import { IconLink, IconLinkOff } from "@/components/ui/icon-button";
+import { Notice } from "@/components/ui/notice";
+import { SectionTitle } from "@/components/ui/section-title";
+import { StatTile } from "@/components/ui/stat-tile";
+import { surfaceVariants } from "@/components/ui/surface";
 
 const MAX_WEEKS_BACK = 52;
 const pct = (value: number) => `${Math.round(value * 100)}%`;
@@ -36,11 +42,11 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
 
 const SUGGESTION_STYLE: Record<
   SuggestionKind,
-  { icon: typeof Sparkles; box: string; iconClass: string }
+  { icon: LucideIcon; tone: "success" | "warning" | "card"; badge: IconBadgeTone }
 > = {
-  praise: { icon: Sparkles, box: "border-success/30 bg-success/10", iconClass: "text-success" },
-  tip: { icon: Lightbulb, box: "border-warning/30 bg-warning/10", iconClass: "text-warning" },
-  info: { icon: Info, box: "border-border bg-card", iconClass: "text-muted-foreground" },
+  praise: { icon: Sparkles, tone: "success", badge: "success" },
+  tip: { icon: Lightbulb, tone: "warning", badge: "warning" },
+  info: { icon: Info, tone: "card", badge: "muted" },
 };
 
 export default async function ReviewPage({
@@ -81,11 +87,6 @@ export default async function ReviewPage({
   const nextWeek = addDaysISO(weekStart, 7);
   const hasPrevious = compareISO(previousWeek, oldestWeek) >= 0;
 
-  const navClass =
-    "flex size-10 shrink-0 items-center justify-center rounded-full border border-input bg-card transition-colors hover:bg-accent";
-  const navOff =
-    "flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground/50";
-
   const dayName = (date: string) => capitalize(WEEKDAY_NAMES[weekdayOf(date)]);
 
   return (
@@ -94,13 +95,9 @@ export default async function ReviewPage({
 
       <div className="flex items-center gap-2">
         {hasPrevious ? (
-          <Link href={`/review?w=${previousWeek}`} className={navClass} aria-label="Semana anterior">
-            <ChevronLeft className="size-5" />
-          </Link>
+          <IconLink href={`/review?w=${previousWeek}`} icon={ChevronLeft} label="Semana anterior" />
         ) : (
-          <span className={navOff} aria-hidden>
-            <ChevronLeft className="size-5" />
-          </span>
+          <IconLinkOff icon={ChevronLeft} />
         )}
         <div className="min-w-0 flex-1 text-center">
           <p className="font-bold">{describeWeek(review)}</p>
@@ -109,13 +106,9 @@ export default async function ReviewPage({
           </p>
         </div>
         {!isCurrent ? (
-          <Link href={`/review?w=${nextWeek}`} className={navClass} aria-label="Próxima semana">
-            <ChevronRight className="size-5" />
-          </Link>
+          <IconLink href={`/review?w=${nextWeek}`} icon={ChevronRight} label="Próxima semana" />
         ) : (
-          <span className={navOff} aria-hidden>
-            <ChevronRight className="size-5" />
-          </span>
+          <IconLinkOff icon={ChevronRight} />
         )}
       </div>
 
@@ -141,19 +134,17 @@ export default async function ReviewPage({
         <section className="space-y-2" aria-label="Sugestões">
           {review.suggestions.map((s, i) => {
             const style = SUGGESTION_STYLE[s.kind];
-            const Icon = style.icon;
             return (
-              <p
+              <Notice
                 key={i}
+                icon={style.icon}
+                tone={style.tone}
+                badge={style.badge}
                 style={{ animationDelay: `${i * 60}ms` }}
-                className={cn(
-                  "animate-rise flex items-start gap-3 rounded-2xl border p-4 text-sm",
-                  style.box,
-                )}
+                className="animate-rise"
               >
-                <Icon className={cn("mt-0.5 size-5 shrink-0", style.iconClass)} aria-hidden />
-                <span>{s.text}</span>
-              </p>
+                <p>{s.text}</p>
+              </Notice>
             );
           })}
         </section>
@@ -161,20 +152,26 @@ export default async function ReviewPage({
 
       {review.bestDay || review.perfectDays > 0 ? (
         <section className="grid grid-cols-3 gap-2">
-          <Tile
-            icon={<Trophy className="size-4 text-warning" aria-hidden />}
+          <StatTile
+            icon={Trophy}
+            iconClassName="text-warning"
+            size="sm"
             label="Melhor dia"
             value={review.bestDay ? dayName(review.bestDay.date) : "—"}
             sub={review.bestDay ? pct(review.bestDay.percent) : undefined}
           />
-          <Tile
-            icon={<TrendingDown className="size-4 text-muted-foreground" aria-hidden />}
+          <StatTile
+            icon={TrendingDown}
+            iconClassName="text-muted-foreground"
+            size="sm"
             label="Dia mais difícil"
             value={review.worstDay ? dayName(review.worstDay.date) : "—"}
             sub={review.worstDay ? pct(review.worstDay.percent) : undefined}
           />
-          <Tile
-            icon={<CalendarCheck className="size-4 text-success" aria-hidden />}
+          <StatTile
+            icon={CalendarCheck}
+            iconClassName="text-success"
+            size="sm"
             label="Dias com 100%"
             value={String(review.perfectDays)}
           />
@@ -183,15 +180,10 @@ export default async function ReviewPage({
 
       {review.habits.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Por hábito
-          </h2>
+          <SectionTitle>Por hábito</SectionTitle>
           <ul className="space-y-2">
             {review.habits.map((h) => (
-              <li
-                key={h.habitId}
-                className="rounded-2xl border border-border bg-card p-4 shadow-sm"
-              >
+              <li key={h.habitId} className={surfaceVariants()}>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="min-w-0 truncate font-semibold">{h.name}</span>
                   <span className="font-bold tabular-nums">{pct(h.percent)}</span>
@@ -229,29 +221,6 @@ export default async function ReviewPage({
         </Link>{" "}
         e corrija: {formatDisplayDate(weekStart)} em diante.
       </p>
-    </div>
-  );
-}
-
-function Tile({
-  icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-      <p className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
-        {icon}
-        {label}
-      </p>
-      <p className="mt-1 truncate text-sm font-bold">{value}</p>
-      {sub ? <p className="text-xs tabular-nums text-muted-foreground">{sub}</p> : null}
     </div>
   );
 }

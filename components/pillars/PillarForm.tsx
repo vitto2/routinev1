@@ -7,9 +7,12 @@ import { createPillar, updatePillar } from "@/lib/actions/pillars";
 import { focusFirstInvalid, useFormErrors } from "@/lib/forms";
 import { pillarSchema } from "@/lib/validation/pillar";
 import { ICONS_BY_NAME, DEFAULT_ACCENT, accentStyles } from "@/lib/constants/appearance";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/form-field";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { Input } from "@/components/ui/input";
+import { surfaceVariants } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
 import { IconPicker, ColorPicker } from "@/components/pillars/IconColorPicker";
 import type { Pillar } from "@/types/domain";
@@ -56,16 +59,12 @@ export function PillarForm({ pillar }: { pillar?: Pillar }) {
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
       <div
-        className="flex items-center gap-3 rounded-2xl border border-border p-4 transition-colors duration-300"
+        data-ui="pillar-preview"
+        className={cn(surfaceVariants(), "flex items-center gap-3 transition-colors duration-300")}
         style={accent.soft}
         aria-hidden
       >
-        <span
-          className="flex size-12 items-center justify-center rounded-2xl transition-colors duration-300"
-          style={accent.bubble}
-        >
-          <PreviewIcon className="size-6" />
-        </span>
+        <IconBadge icon={PreviewIcon} size="lg" accent={color} />
         <div className="min-w-0">
           <p className="truncate font-semibold" style={accent.text}>
             {name.trim() || "Nome do pilar"}

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { surfaceVariants } from "@/components/ui/surface";
+import { cn } from "@/lib/utils";
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   actionLabel,
@@ -16,12 +19,16 @@ export function EmptyState({
   actionHref?: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border px-6 py-8 text-center">
-      <Icon className="size-6 text-muted-foreground" />
+    <div
+      data-ui="empty-state"
+      className={cn(
+        surfaceVariants({ tone: "dashed", padding: "none" }),
+        "flex flex-col items-center gap-2 px-6 py-8 text-center",
+      )}
+    >
+      <IconBadge icon={icon} size="lg" tone="muted" shape="circle" />
       <p className="font-medium">{title}</p>
-      {description ? (
-        <p className="text-sm text-muted-foreground">{description}</p>
-      ) : null}
+      {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       {actionLabel && actionHref ? (
         // Link com a aparência de botão: continua sendo um <a> (semântica de navegação).
         <Link href={actionHref} className={buttonVariants({ size: "sm", className: "mt-2" })}>

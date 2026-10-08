@@ -16,7 +16,7 @@ export function IconPicker({
   const accent = accentStyles(color);
 
   return (
-    <div role="group" aria-label="Ícone" className="grid grid-cols-6 gap-2">
+    <div role="group" aria-label="Ícone" className="grid grid-cols-6 justify-items-center gap-2">
       {PILLAR_ICONS.map(({ name, label, icon: Icon }) => {
         const active = value === name;
         return (
@@ -29,7 +29,7 @@ export function IconPicker({
             onClick={() => onChange(name)}
             style={active ? accent.bubble : undefined}
             className={cn(
-              "flex aspect-square min-h-11 items-center justify-center rounded-xl border transition-[background-color,border-color,transform] duration-150 active:scale-90",
+              "flex size-11 items-center justify-center rounded-xl border transition-[background-color,border-color,transform] duration-150 active:scale-90",
               active ? "border-current ring-1 ring-current" : "border-input bg-card hover:bg-accent",
             )}
           >

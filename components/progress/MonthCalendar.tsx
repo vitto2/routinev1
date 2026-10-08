@@ -50,7 +50,7 @@ export function MonthCalendar({ month, grid }: { month: string; grid: MonthGrid 
                   key={label}
                   scope="col"
                   abbr={WEEKDAY_NAMES[(i + 1) % 7]}
-                  className="pb-1 text-center text-[11px] font-semibold text-muted-foreground"
+                  className="pb-1 text-center text-xs font-semibold text-muted-foreground"
                 >
                   {label}
                 </th>
@@ -85,7 +85,7 @@ export function MonthCalendar({ month, grid }: { month: string; grid: MonthGrid 
                         <span className="text-xs font-bold leading-none">{cell.day}</span>
                         <LevelIcon level={cell.level} />
                       </span>
-                      <span className="text-[11px] font-semibold tabular-nums leading-none">
+                      <span className="text-xs font-semibold tabular-nums leading-none">
                         {cell.percent === null ? "—" : `${Math.round(cell.percent * 100)}%`}
                       </span>
                     </Link>

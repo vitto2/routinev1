@@ -6,7 +6,10 @@ import { CircleAlert } from "lucide-react";
 import { signIn, type AuthFormState } from "@/lib/actions/auth";
 import { focusFirstInvalid, useFormErrors } from "@/lib/forms";
 import { loginSchema } from "@/lib/validation/auth";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/ui/notice";
+import { surfaceVariants } from "@/components/ui/surface";
 import { Field } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -53,7 +56,7 @@ export function LoginForm({ googleError = false }: { googleError?: boolean }) {
       ref={formRef}
       onSubmit={handleSubmit}
       noValidate
-      className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm"
+      className={cn(surfaceVariants({ padding: "none" }), "space-y-5 p-6")}
     >
       {GOOGLE_ENABLED ? (
         <>
@@ -99,23 +102,17 @@ export function LoginForm({ googleError = false }: { googleError?: boolean }) {
       </Field>
 
       {googleError && !state.error ? (
-        <p
-          role="alert"
-          className="flex items-start gap-2 rounded-xl bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive"
-        >
-          <CircleAlert className="mt-0.5 size-4 shrink-0" />
-          Não foi possível entrar com o Google. Tente novamente ou use email e senha.
-        </p>
+        <Notice icon={CircleAlert} tone="danger" badge="danger" role="alert">
+          <p className="font-medium">
+            Não foi possível entrar com o Google. Tente novamente ou use email e senha.
+          </p>
+        </Notice>
       ) : null}
 
       {state.error ? (
-        <p
-          role="alert"
-          className="animate-rise flex items-start gap-2 rounded-xl bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive"
-        >
-          <CircleAlert className="mt-0.5 size-4 shrink-0" />
-          {state.error}
-        </p>
+        <Notice icon={CircleAlert} tone="danger" badge="danger" role="alert" className="animate-rise">
+          <p className="font-medium">{state.error}</p>
+        </Notice>
       ) : null}
 
       <Button type="submit" size="lg" className="w-full" disabled={pending}>

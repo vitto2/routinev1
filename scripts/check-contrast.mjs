@@ -124,6 +124,32 @@ for (const [theme, selector] of [["CLARO", ":root"], ["ESCURO", ".dark"]]) {
   // Cartão de pausa no Perfil: ícone warning sobre warning/15% do card.
   check("cartão de pausa: ícone sobre tom 15% (UI 3:1)", t.warning, over(t.warning, t.card, 0.15), 3);
 
+  // Componentes do sistema de design v2 (docs/DESIGN.md).
+  // Notice: texto sobre o tom do aviso (sobre a página ou sobre um card) e ícone na caixa de 32 px.
+  for (const [name, boxAlpha] of [["success", 0.15], ["warning", 0.15], ["destructive", 0.1]]) {
+    for (const [baseLabel, base] of [["fundo", t.background], ["card", t.card]]) {
+      const surface = over(t[name], base, 0.1);
+      check(`aviso ${name} (${baseLabel}): texto sobre o tom 10%`, t.foreground, surface, 4.5);
+      check(`aviso ${name} (${baseLabel}): texto secundário sobre o tom 10%`, t["muted-foreground"], surface, 4.5);
+      check(`aviso ${name} (${baseLabel}): ícone na caixa (UI 3:1)`, t[name], over(t[name], surface, boxAlpha), 3);
+    }
+  }
+  // Aviso neutro (inset) e StatTile: bg-muted/60 sobre a página, o card e o destaque do Progresso.
+  const heroSurface = over(t.primary, t.card, 0.15);
+  for (const [baseLabel, base] of [["fundo", t.background], ["card", t.card], ["destaque", heroSurface]]) {
+    const tile = over(t.muted, base, 0.6);
+    check(`tile/aviso neutro (${baseLabel}): texto`, t.foreground, tile, 4.5);
+    check(`tile/aviso neutro (${baseLabel}): legenda`, t["muted-foreground"], tile, 4.5);
+    check(`tile/aviso neutro (${baseLabel}): ícone primary (UI 3:1)`, t.primary, tile, 3);
+  }
+  // Grade da semana: ícones de estado sobre o card e sobre a coluna de hoje (primary/10%).
+  for (const [baseLabel, base] of [["card", t.card], ["hoje", over(t.primary, t.card, 0.1)]]) {
+    check(`semana (${baseLabel}): feito (UI 3:1)`, t.success, base, 3);
+    check(`semana (${baseLabel}): não feito (UI 3:1)`, t.destructive, base, 3);
+    check(`semana (${baseLabel}): em aberto (UI 3:1)`, t["muted-foreground"], base, 3);
+    check(`semana (${baseLabel}): não programado a 70% (UI 3:1)`, over(t["muted-foreground"], base, 0.7), base, 3);
+  }
+
   // Barras dos gráficos: preenchida e contorno do período em andamento sobre o card.
   check("gráfico: barra primary / card (UI 3:1)", t.primary, t.card, 3);
   check("gráfico: contorno primary / card (UI 3:1)", t.primary, t.card, 3);

@@ -3,11 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CircleAlert, ShieldCheck } from "lucide-react";
+import { Check, CircleAlert, ShieldCheck } from "lucide-react";
 import { pauseHabits } from "@/lib/actions/pause";
 import { addDaysISO, compareISO, formatDisplayDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
+import { Notice } from "@/components/ui/notice";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
 import {
@@ -139,20 +141,20 @@ function PauseForm({
                     aria-pressed={checked}
                     onClick={() => toggle(habit.id)}
                     className={cn(
-                      "flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 text-left text-sm transition-colors",
+                      "flex min-h-12 w-full items-center gap-3 rounded-xl border px-3 text-left text-sm transition-colors",
                       checked ? "border-primary bg-primary/10" : "border-input bg-card hover:bg-accent",
                     )}
                   >
                     <span
                       className={cn(
-                        "flex size-5 shrink-0 items-center justify-center rounded border-2 text-xs font-bold",
+                        "flex size-6 shrink-0 items-center justify-center rounded-full border-2",
                         checked
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-input",
                       )}
                       aria-hidden
                     >
-                      {checked ? "✓" : ""}
+                      {checked ? <Check className="size-4" strokeWidth={3} /> : null}
                     </span>
                     <span className="truncate font-medium">{habit.name}</span>
                   </button>
@@ -167,23 +169,16 @@ function PauseForm({
         <p className="text-sm font-medium">Por quanto tempo?</p>
         <div role="group" aria-label="Duração da pausa" className="flex flex-wrap gap-2">
           {DURATIONS.map((option) => (
-            <button
+            <Chip
               key={option.value}
-              type="button"
-              aria-pressed={duration === option.value}
+              active={duration === option.value}
               onClick={() => {
                 setDuration(option.value);
                 setError(null);
               }}
-              className={cn(
-                "min-h-10 rounded-full border px-3.5 text-sm font-medium transition-[background-color,border-color,transform] duration-150 active:scale-95",
-                duration === option.value
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-input bg-card hover:bg-accent",
-              )}
             >
               {option.label}
-            </button>
+            </Chip>
           ))}
         </div>
         {duration === "custom" ? (
@@ -203,16 +198,16 @@ function PauseForm({
         </p>
       </div>
 
-      <p className="flex items-start gap-2 text-xs text-muted-foreground">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-        Seu histórico e suas sequências ficam preservados: dias em pausa não contam como falha.
-      </p>
+      <Notice icon={ShieldCheck} badge="success">
+        <p className="text-muted-foreground">
+          Seu histórico e suas sequências ficam preservados: dias em pausa não contam como falha.
+        </p>
+      </Notice>
 
       {error ? (
-        <p role="alert" className="flex items-start gap-1.5 text-sm font-medium text-destructive">
-          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-          {error}
-        </p>
+        <Notice icon={CircleAlert} tone="danger" badge="danger" role="alert">
+          <p className="font-medium">{error}</p>
+        </Notice>
       ) : null}
 
       <Button type="submit" size="lg" className="w-full" disabled={pending}>

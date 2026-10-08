@@ -6,6 +6,10 @@ import { toast } from "sonner";
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { assignHabitToRoutine, moveHabitInRoutine } from "@/lib/actions/routines";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { SectionTitle } from "@/components/ui/section-title";
+import { surfaceVariants } from "@/components/ui/surface";
+import { cn } from "@/lib/utils";
 
 export interface RoutineHabitItem {
   id: string;
@@ -37,21 +41,18 @@ export function RoutineHabits({
     });
   }
 
-  const iconButton =
-    "flex size-10 items-center justify-center rounded-full border border-input bg-card text-foreground transition-colors hover:bg-accent disabled:opacity-40";
-
   return (
     <div className="space-y-6">
       <section className="space-y-2" aria-labelledby="members-heading">
-        <h2
-          id="members-heading"
-          className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >
-          Hábitos desta rotina ({members.length})
-        </h2>
+        <SectionTitle id="members-heading">Hábitos desta rotina ({members.length})</SectionTitle>
 
         {members.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-input p-4 text-sm text-muted-foreground">
+          <p
+            className={cn(
+              surfaceVariants({ tone: "dashed", padding: "md" }),
+              "text-sm text-muted-foreground",
+            )}
+          >
             Nenhum hábito ainda. Adicione abaixo.
           </p>
         ) : (
@@ -59,39 +60,36 @@ export function RoutineHabits({
             {members.map((habit, index) => (
               <li
                 key={habit.id}
-                className="flex items-center gap-2 rounded-2xl border border-border bg-card p-2 pl-4 shadow-sm"
+                className={cn(
+                  surfaceVariants({ padding: "none" }),
+                  "flex min-h-16 items-center gap-2 py-3 pl-4 pr-2",
+                )}
               >
                 <span className="w-5 text-sm font-semibold tabular-nums text-muted-foreground">
                   {index + 1}
                 </span>
                 <span className="min-w-0 flex-1 truncate font-medium">{habit.name}</span>
-                <button
-                  type="button"
-                  className={iconButton}
+                <IconButton
+                  icon={ArrowUp}
+                  variant="outline"
+                  label={`Mover ${habit.name} para cima`}
                   disabled={pending || index === 0}
-                  aria-label={`Mover ${habit.name} para cima`}
                   onClick={() => run(() => moveHabitInRoutine(habit.id, "up"))}
-                >
-                  <ArrowUp className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  className={iconButton}
+                />
+                <IconButton
+                  icon={ArrowDown}
+                  variant="outline"
+                  label={`Mover ${habit.name} para baixo`}
                   disabled={pending || index === members.length - 1}
-                  aria-label={`Mover ${habit.name} para baixo`}
                   onClick={() => run(() => moveHabitInRoutine(habit.id, "down"))}
-                >
-                  <ArrowDown className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  className={iconButton}
+                />
+                <IconButton
+                  icon={X}
+                  variant="outline"
+                  label={`Tirar ${habit.name} da rotina`}
                   disabled={pending}
-                  aria-label={`Tirar ${habit.name} da rotina`}
                   onClick={() => run(() => assignHabitToRoutine(habit.id, null))}
-                >
-                  <X className="size-4" />
-                </button>
+                />
               </li>
             ))}
           </ol>
@@ -99,12 +97,7 @@ export function RoutineHabits({
       </section>
 
       <section className="space-y-2" aria-labelledby="available-heading">
-        <h2
-          id="available-heading"
-          className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >
-          Adicionar hábito
-        </h2>
+        <SectionTitle id="available-heading">Adicionar hábito</SectionTitle>
 
         {available.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -115,9 +108,12 @@ export function RoutineHabits({
             {available.map((habit) => (
               <li
                 key={habit.id}
-                className="flex items-center gap-2 rounded-2xl border border-border bg-card p-2 pl-4"
+                className={cn(
+                  surfaceVariants({ padding: "none" }),
+                  "flex min-h-16 items-center gap-2 py-3 pl-4 pr-3",
+                )}
               >
-                <span className="min-w-0 flex-1 truncate">{habit.name}</span>
+                <span className="min-w-0 flex-1 truncate font-medium">{habit.name}</span>
                 <Button
                   type="button"
                   size="sm"
@@ -127,7 +123,7 @@ export function RoutineHabits({
                     run(() => assignHabitToRoutine(habit.id, routineId), "Hábito adicionado")
                   }
                 >
-                  <Plus className="size-4" />
+                  <Plus aria-hidden />
                   Adicionar
                 </Button>
               </li>

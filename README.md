@@ -61,10 +61,11 @@ Variáveis `NEXT_PUBLIC_*` entram no build: depois de mudar, faça um novo deplo
 | `npm run lint` | ESLint |
 | `npm test` | testes unitários (regras de pontuação, sequência, pausa, desafios, fila offline, CSV...) |
 | `npm run check:contrast` | confere o contraste (WCAG AA) de todas as cores nos temas claro e escuro |
+| `npm run check:ui` | confere o padrão visual do código (ícones na escala 14/16/20/24, sem tamanhos soltos, sem cards escritos à mão). Regras em `docs/DESIGN.md` |
 | `npm run check:db` | roda as migrations num Postgres em memória e testa triggers, RLS entre dois usuários e se `types/database.types.ts` bate com o banco. **Não toca no seu Supabase.** |
 
 Antes de subir mudanças: `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run check:contrast`,
-`npm run check:db` e `npm run build`.
+`npm run check:ui`, `npm run check:db` e `npm run build`.
 
 ## Documentação
 
@@ -72,6 +73,7 @@ Antes de subir mudanças: `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm r
 |---|---|
 | `docs/PLAN.md` | plano técnico original (arquitetura, schema, regras) |
 | `docs/PLANO_V2.md` | as 14 funcionalidades da V2, decisões e limitações |
+| `docs/DESIGN.md` | sistema de design: escalas de ícone, card e espaçamento e os componentes de `components/ui` |
 | `docs/NOTIFICACOES.md` | configurar o push (VAPID, cron no Supabase) |
 | `docs/GOOGLE_LOGIN.md` | configurar o login com Google |
 | `docs/OFFLINE.md` | como funciona a marcação offline e como testar |
@@ -80,7 +82,7 @@ Antes de subir mudanças: `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm r
 ## Estrutura
 
 - `app/(auth)` login e cadastro · `app/(app)` área logada (Hoje, Semana, Progresso, Perfil, Hábitos, Pilares, Rotinas, Revisão) · `app/api` cron de lembretes e exportação
-- `lib/actions` mutações (Server Actions) · `lib/data` leituras · `lib/offline` fila de marcações offline
+- `components/ui` sistema de design (Surface, IconBadge, ListRow, Panel, Notice, Chip...) · `lib/actions` mutações (Server Actions) · `lib/data` leituras · `lib/offline` fila de marcações offline
 - `lib/scheduling`, `lib/scoring`, `lib/dates`, `lib/progress` regras de negócio (funções puras, testadas)
 - `supabase/migrations` schema, RLS e evoluções · `scripts` verificações · `tests` testes · `public/sw.js` service worker
 

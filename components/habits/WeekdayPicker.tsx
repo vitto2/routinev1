@@ -36,7 +36,7 @@ export function WeekdayPicker({
         role="group"
         aria-label="Dias da semana"
         aria-describedby={describedBy}
-        className="grid grid-cols-7 gap-1.5"
+        className="grid grid-cols-7 justify-items-center gap-1.5"
       >
         {ORDER.map((day) => {
           const active = value.includes(day);
@@ -48,7 +48,7 @@ export function WeekdayPicker({
               aria-label={WEEKDAY_NAMES[day]}
               onClick={() => toggle(day)}
               className={cn(
-                "flex aspect-square min-h-11 items-center justify-center rounded-full border text-xs font-semibold transition-[background-color,border-color,color,transform] duration-150 active:scale-90",
+                "flex size-10 items-center justify-center rounded-full border text-xs font-semibold transition-[background-color,border-color,color,transform] duration-150 active:scale-90",
                 active
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
                   : "border-input bg-card text-foreground hover:bg-accent",

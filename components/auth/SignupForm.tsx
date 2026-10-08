@@ -6,7 +6,10 @@ import { CircleAlert, MailCheck } from "lucide-react";
 import { signUp, type AuthFormState } from "@/lib/actions/auth";
 import { focusFirstInvalid, useFormErrors } from "@/lib/forms";
 import { signupSchema } from "@/lib/validation/auth";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/ui/notice";
+import { surfaceVariants } from "@/components/ui/surface";
 import { Field } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -58,7 +61,7 @@ export function SignupForm() {
       ref={formRef}
       onSubmit={handleSubmit}
       noValidate
-      className="space-y-5 rounded-3xl border border-border bg-card p-6 shadow-sm"
+      className={cn(surfaceVariants({ padding: "none" }), "space-y-5 p-6")}
     >
       {GOOGLE_ENABLED ? (
         <>
@@ -128,23 +131,15 @@ export function SignupForm() {
       </Field>
 
       {state.error ? (
-        <p
-          role="alert"
-          className="animate-rise flex items-start gap-2 rounded-xl bg-destructive/10 px-3 py-2.5 text-sm font-medium text-destructive"
-        >
-          <CircleAlert className="mt-0.5 size-4 shrink-0" />
-          {state.error}
-        </p>
+        <Notice icon={CircleAlert} tone="danger" badge="danger" role="alert" className="animate-rise">
+          <p className="font-medium">{state.error}</p>
+        </Notice>
       ) : null}
 
       {state.message ? (
-        <p
-          role="status"
-          className="animate-rise flex items-start gap-2 rounded-xl bg-success/10 px-3 py-2.5 text-sm font-medium text-foreground"
-        >
-          <MailCheck className="mt-0.5 size-4 shrink-0 text-success" />
-          {state.message}
-        </p>
+        <Notice icon={MailCheck} tone="success" badge="success" role="status" className="animate-rise">
+          <p className="font-medium">{state.message}</p>
+        </Notice>
       ) : null}
 
       <Button type="submit" size="lg" className="w-full" disabled={pending}>

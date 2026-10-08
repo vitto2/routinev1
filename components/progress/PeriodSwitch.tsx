@@ -15,6 +15,7 @@ export function PeriodSwitch({ active }: { active: PeriodDays }) {
   return (
     <nav
       aria-label="Período do resumo"
+      data-ui="segmented-switch"
       className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-muted p-1"
     >
       {PERIODS.map((days) => {

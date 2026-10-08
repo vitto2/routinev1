@@ -63,8 +63,8 @@ export function Segmented<T extends string>({
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}
             className={cn(
-              "min-h-12 rounded-xl border px-3 py-2.5 text-left transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.98]",
-              option.description ? "" : "text-center",
+              "flex min-h-14 flex-col justify-center rounded-xl border px-3 py-2.5 text-left transition-[background-color,border-color,box-shadow,transform] duration-200 active:scale-[0.98]",
+              option.description ? "" : "items-center text-center",
               active
                 ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary"
                 : "border-input bg-card hover:bg-accent",

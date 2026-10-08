@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, PauseCircle } from "lucide-react";
 import { createHabit, updateHabit } from "@/lib/actions/habits";
 import { focusFirstInvalid, useFormErrors } from "@/lib/forms";
 import { habitSchema, type ScheduleInput } from "@/lib/validation/habit";
@@ -13,8 +13,12 @@ import { describeSchedule } from "@/lib/scheduling/summary";
 import { ICONS_BY_NAME, accentStyles, DEFAULT_ACCENT } from "@/lib/constants/appearance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Field } from "@/components/ui/form-field";
+import { IconBadge } from "@/components/ui/icon-badge";
 import { Input } from "@/components/ui/input";
+import { Notice } from "@/components/ui/notice";
+import { surfaceVariants } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
 import { Segmented } from "@/components/ui/segmented";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,32 +48,6 @@ const GOAL_CHIPS: Record<"quantity" | "time", number[]> = {
 
 const toNumber = (value: string) =>
   value.trim() === "" ? undefined : Number(value.replace(",", "."));
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "min-h-10 rounded-full border px-3.5 text-sm font-medium transition-[background-color,border-color,transform] duration-150 active:scale-95",
-        active
-          ? "border-primary bg-primary/10 text-primary"
-          : "border-input bg-card text-foreground hover:bg-accent",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 export function HabitForm({
   habit,
@@ -205,16 +183,12 @@ export function HabitForm({
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-7">
       <div
-        className="flex items-center gap-3 rounded-2xl border border-border p-4 transition-colors duration-300"
+        data-ui="habit-preview"
+        className={cn(surfaceVariants(), "flex items-center gap-3 transition-colors duration-300")}
         style={accent.soft}
         aria-hidden
       >
-        <span
-          className="flex size-12 shrink-0 items-center justify-center rounded-2xl transition-colors duration-300"
-          style={accent.bubble}
-        >
-          {PreviewIcon ? <PreviewIcon className="size-6" /> : <span className="size-3 rounded-full bg-current" />}
-        </span>
+        <IconBadge icon={PreviewIcon ?? undefined} size="lg" accent={color ?? pillar?.color ?? null} />
         <div className="min-w-0">
           <p className="truncate font-semibold" style={accent.text}>
             {name.trim() || "Nome do hábito"}
@@ -328,9 +302,9 @@ export function HabitForm({
 
       <div className={cn("space-y-3", frequencyLocked && "opacity-60")}>
         {frequencyLocked ? (
-          <p role="note" className="rounded-xl bg-warning/10 px-3 py-2 text-sm">
-            Este hábito está em pausa por tempo indeterminado. Retome-o para alterar a frequência.
-          </p>
+          <Notice icon={PauseCircle} tone="warning" badge="warning">
+            <p>Este hábito está em pausa por tempo indeterminado. Retome-o para alterar a frequência.</p>
+          </Notice>
         ) : null}
         <fieldset disabled={frequencyLocked} className="space-y-3 border-0 p-0">
         <Field id="habit-schedule" label="Frequência" required>
@@ -463,7 +437,7 @@ export function HabitForm({
           </Field>
         ) : null}
 
-        <p aria-live="polite" className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
+        <p aria-live="polite" className="rounded-xl bg-muted/60 px-3 py-2.5 text-sm text-muted-foreground">
           <span className="font-medium text-foreground">Resumo: </span>
           {summary}
         </p>
@@ -550,10 +524,10 @@ export function HabitForm({
         )}
       </Field>
 
-      <details className="group rounded-2xl border border-border bg-card">
+      <details className={cn(surfaceVariants({ padding: "none" }), "group")}>
         <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
           Mais opções
-          <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
+          <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
         </summary>
         <div className="space-y-6 border-t border-border p-4">
           <Field id="habit-description" label="Descrição" optionalHint error={errors.description}>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Share, Check } from "lucide-react";
+import { Check, Download, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -57,35 +58,47 @@ export function InstallButton() {
 
   if (mode === "installed") {
     return (
-      <p className="flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-muted-foreground">
-        <Check className="size-4 text-primary" />
-        App instalado neste dispositivo.
-      </p>
+      <Panel
+        icon={Check}
+        tone="success"
+        title="App instalado"
+        description="O Routine já está instalado neste dispositivo."
+      />
     );
   }
 
   if (mode === "prompt") {
     return (
-      <Button className="h-12 w-full rounded-2xl text-base" onClick={handleInstall}>
-        <Download className="size-4" />
-        Instalar app
-      </Button>
+      <Panel
+        icon={Download}
+        title="Use como aplicativo"
+        description="Abra o Routine direto da tela inicial, em tela cheia."
+      >
+        <Button className="w-full" onClick={handleInstall}>
+          <Download aria-hidden />
+          Instalar app
+        </Button>
+      </Panel>
     );
   }
 
   if (mode === "ios") {
     return (
-      <p className="flex items-start gap-2 rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-muted-foreground">
-        <Share className="mt-0.5 size-4 shrink-0" />
-        No iPhone: toque em Compartilhar e depois em &ldquo;Adicionar à Tela de Início&rdquo;.
-      </p>
+      <Panel
+        icon={Share}
+        tone="muted"
+        title="Instalar no iPhone"
+        description="Toque em Compartilhar e depois em “Adicionar à Tela de Início”."
+      />
     );
   }
 
   return (
-    <p className="rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-muted-foreground">
-      Para instalar, abra no Chrome e use o menu &ldquo;Instalar app&rdquo; (ícone na barra de
-      endereço no computador, ou &ldquo;Adicionar à tela inicial&rdquo; no celular).
-    </p>
+    <Panel
+      icon={Smartphone}
+      tone="muted"
+      title="Instalar o app"
+      description="Abra no Chrome e use o menu “Instalar app” (ícone na barra de endereço no computador, ou “Adicionar à tela inicial” no celular)."
+    />
   );
 }

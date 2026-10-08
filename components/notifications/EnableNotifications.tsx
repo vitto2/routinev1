@@ -9,6 +9,7 @@ import {
   sendTestPush,
 } from "@/lib/actions/push";
 import { Button } from "@/components/ui/button";
+import { Panel } from "@/components/ui/panel";
 import { cn } from "@/lib/utils";
 
 type Status =
@@ -142,40 +143,28 @@ export function EnableNotifications({
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-xl",
-            status === "on" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">
-            {status === "on" ? "Lembretes ativados" : "Lembretes de tarefas e hábitos"}
-          </p>
-          <p className="text-sm text-muted-foreground">{description[status]}</p>
-        </div>
-      </div>
-
+    <Panel
+      icon={Icon}
+      tone={status === "on" ? "primary" : "muted"}
+      title={status === "on" ? "Lembretes ativados" : "Lembretes de tarefas e hábitos"}
+      description={description[status]}
+    >
       {status === "off" ? (
-        <Button className="mt-3 h-10 w-full rounded-xl" onClick={enable} disabled={pending}>
+        <Button className="w-full" onClick={enable} disabled={pending}>
           {pending ? "Ativando..." : "Ativar lembretes"}
         </Button>
       ) : null}
 
       {status === "on" ? (
-        <div className={cn("mt-3 flex gap-2", compact && "hidden")}>
-          <Button variant="outline" className="h-10 flex-1 rounded-xl" onClick={sendTest} disabled={pending}>
+        <div className={cn("flex gap-2", compact && "hidden")}>
+          <Button variant="outline" className="flex-1" onClick={sendTest} disabled={pending}>
             Enviar teste
           </Button>
-          <Button variant="ghost" className="h-10 rounded-xl text-muted-foreground" onClick={disable} disabled={pending}>
+          <Button variant="ghost" className="text-muted-foreground" onClick={disable} disabled={pending}>
             Desativar
           </Button>
         </div>
       ) : null}
-    </div>
+    </Panel>
   );
 }

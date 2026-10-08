@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             width={72}
             height={72}
             priority
-            className="mb-4 rounded-[20px] shadow-lg shadow-primary/30"
+            className="mb-4 rounded-xl shadow-lg shadow-primary/30"
           />
           <h1 className="text-3xl font-bold tracking-tight">Routine</h1>
           <p className="mt-1 text-sm text-muted-foreground">

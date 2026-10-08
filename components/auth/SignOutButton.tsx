@@ -73,11 +73,12 @@ export function SignOutButton() {
     <Button
       type="button"
       variant="outline"
+      size="lg"
       className="w-full"
       disabled={pending}
       onClick={handleSignOut}
     >
-      <LogOut className="size-4" />
+      <LogOut aria-hidden />
       {pending ? "Saindo..." : "Sair"}
     </Button>
   );

@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getPillars } from "@/lib/data/pillars";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/layout/EmptyState";
-import { ICONS_BY_NAME, accentStyles } from "@/lib/constants/appearance";
+import { ICONS_BY_NAME } from "@/lib/constants/appearance";
 import { buttonVariants } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { ListRow, RowChevron } from "@/components/ui/list-row";
 
 export default async function PillarsPage() {
   const supabase = await createClient();
@@ -13,13 +15,16 @@ export default async function PillarsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <PageHeader title="Pilares" backHref="/profile" />
-        <Link href="/pillars/new" className={buttonVariants({ size: "sm", variant: "outline" })}>
-          <Plus className="size-4" />
-          Novo
-        </Link>
-      </div>
+      <PageHeader
+        title="Pilares"
+        backHref="/profile"
+        action={
+          <Link href="/pillars/new" className={buttonVariants({ size: "sm", variant: "outline" })}>
+            <Plus aria-hidden />
+            Novo
+          </Link>
+        }
+      />
 
       {pillars.length === 0 ? (
         <EmptyState
@@ -31,33 +36,23 @@ export default async function PillarsPage() {
         />
       ) : (
         <div className="space-y-2">
-          {pillars.map((pillar) => {
-            const Icon = pillar.icon ? ICONS_BY_NAME[pillar.icon] : undefined;
-            const accent = accentStyles(pillar.color);
-            return (
-              <Link
-                key={pillar.id}
-                href={`/pillars/${pillar.id}`}
-                className="flex min-h-16 items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-colors hover:bg-accent/40"
-              >
-                <span
-                  className="flex size-11 shrink-0 items-center justify-center rounded-2xl"
-                  style={accent.bubble}
-                  aria-hidden
-                >
-                  {Icon ? <Icon className="size-5" /> : null}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold">{pillar.name}</p>
-                  {pillar.description ? (
-                    <p className="truncate text-xs text-muted-foreground">
-                      {pillar.description}
-                    </p>
-                  ) : null}
-                </div>
-              </Link>
-            );
-          })}
+          {pillars.map((pillar, i) => (
+            <ListRow
+              key={pillar.id}
+              href={`/pillars/${pillar.id}`}
+              style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+              className="animate-rise"
+              leading={
+                <IconBadge
+                  icon={pillar.icon ? ICONS_BY_NAME[pillar.icon] : undefined}
+                  accent={pillar.color ?? null}
+                />
+              }
+              title={pillar.name}
+              subtitle={pillar.description || undefined}
+              trailing={<RowChevron />}
+            />
+          ))}
         </div>
       )}
     </div>

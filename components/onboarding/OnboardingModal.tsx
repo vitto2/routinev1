@@ -9,6 +9,8 @@ import { LIFE_AREAS, type LifeArea } from "@/lib/constants/onboarding";
 import { ICONS_BY_NAME, accentStyles, readableOn } from "@/lib/constants/appearance";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { IconBadge } from "@/components/ui/icon-badge";
+import { surfaceVariants } from "@/components/ui/surface";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EnableNotifications } from "@/components/notifications/EnableNotifications";
 
@@ -121,41 +123,42 @@ export function OnboardingModal({ displayName }: { displayName: string | null })
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-xl"
+              size="lg"
               onClick={() => setStep(step - 1)}
               disabled={pending}
             >
-              <ArrowLeft className="size-4" />
+              <ArrowLeft aria-hidden />
               Voltar
             </Button>
           ) : null}
 
           {step === 0 ? (
-            <Button className="h-11 flex-1 rounded-xl text-base" onClick={() => setStep(1)}>
+            <Button size="lg" className="flex-1" onClick={() => setStep(1)}>
               Vamos começar
-              <ArrowRight className="size-4" />
+              <ArrowRight aria-hidden />
             </Button>
           ) : null}
           {step === 1 ? (
             <Button
-              className="h-11 flex-1 rounded-xl text-base"
+              size="lg"
+              className="flex-1"
               onClick={goToHabits}
               disabled={areas.length === 0}
             >
               Continuar
-              <ArrowRight className="size-4" />
+              <ArrowRight aria-hidden />
             </Button>
           ) : null}
           {step === 2 ? (
-            <Button className="h-11 flex-1 rounded-xl text-base" onClick={() => setStep(3)}>
+            <Button size="lg" className="flex-1" onClick={() => setStep(3)}>
               {habits.length === 0 ? "Criar depois" : `Continuar (${habits.length})`}
-              <ArrowRight className="size-4" />
+              <ArrowRight aria-hidden />
             </Button>
           ) : null}
           {step === 3 ? (
-            <Button className="h-11 flex-1 rounded-xl text-base" onClick={finish} disabled={pending}>
+            <Button size="lg" className="flex-1" onClick={finish} disabled={pending}>
               {pending ? "Preparando seu painel..." : "Ir para o Hoje"}
-              {!pending ? <Check className="size-4" /> : null}
+              {!pending ? <Check aria-hidden /> : null}
             </Button>
           ) : null}
         </div>
@@ -174,9 +177,12 @@ function Welcome({ firstName }: { firstName?: string }) {
   return (
     <div className="space-y-6">
       <div className="space-y-3 text-center">
-        <div className="animate-check mx-auto flex size-16 items-center justify-center rounded-2xl bg-gradient-to-b from-indigo-500 to-indigo-700 text-white shadow-lg shadow-indigo-500/30">
-          <Sparkles className="size-7" />
-        </div>
+        <IconBadge
+          icon={Sparkles}
+          size="xl"
+          tone="solid"
+          className="animate-check mx-auto bg-gradient-to-b from-indigo-500 to-indigo-700 text-white shadow-lg shadow-indigo-500/30"
+        />
         <DialogTitle className="text-2xl font-semibold tracking-tight">
           {firstName ? `Bem-vindo, ${firstName}!` : "Bem-vindo ao Routine!"}
         </DialogTitle>
@@ -189,11 +195,9 @@ function Welcome({ firstName }: { firstName?: string }) {
           <li
             key={title}
             style={{ animationDelay: `${120 + i * 90}ms` }}
-            className="animate-rise flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5"
+            className={cn(surfaceVariants({ padding: "row" }), "animate-rise flex items-center gap-3")}
           >
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Icon className="size-4" />
-            </span>
+            <IconBadge icon={Icon} />
             <span>
               <span className="block font-medium">{title}</span>
               <span className="block text-sm text-muted-foreground">{text}</span>
@@ -262,26 +266,21 @@ function AreaCard({
       aria-pressed={active}
       style={style}
       className={cn(
-        "animate-rise relative flex flex-col items-start gap-2 rounded-2xl border p-3.5 text-left transition-[transform,border-color,background-color] duration-200 active:scale-[0.97]",
+        "animate-rise relative flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-[transform,border-color,background-color] duration-200 active:scale-[0.97]",
         active ? "border-transparent ring-2" : "border-border bg-card hover:bg-accent",
       )}
     >
-      <span
-        className="flex size-9 items-center justify-center rounded-xl"
-        style={accentStyles(area.color).bubble}
-      >
-        <Icon className="size-4" />
-      </span>
+      <IconBadge icon={Icon} accent={area.color} />
       <span>
         <span className="block font-medium leading-tight">{area.name}</span>
         <span className="block text-xs text-muted-foreground">{area.tagline}</span>
       </span>
       {active ? (
         <span
-          className="animate-check absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full"
+          className="animate-check absolute right-3 top-3 flex size-6 items-center justify-center rounded-full"
           style={{ backgroundColor: area.color, color: readableOn(area.color) }}
         >
-          <Check className="size-3" />
+          <Check className="size-4" aria-hidden />
         </span>
       ) : null}
     </button>
@@ -327,7 +326,7 @@ function HabitsStep({
                       aria-pressed={active}
                       style={{ animationDelay: `${i * 40}ms` }}
                       className={cn(
-                        "animate-rise flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-[transform,border-color,background-color] duration-200 active:scale-[0.98]",
+                        "animate-rise flex min-h-14 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-[transform,border-color,background-color] duration-200 active:scale-[0.98]",
                         active ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:bg-accent",
                       )}
                     >
@@ -339,7 +338,7 @@ function HabitsStep({
                             : "border-muted-foreground/30",
                         )}
                       >
-                        {active ? <Check className="size-3.5" /> : null}
+                        {active ? <Check className="size-4" aria-hidden /> : null}
                       </span>
                       <span className="flex-1">
                         <span className="block font-medium leading-tight">{habit.name}</span>
@@ -361,9 +360,14 @@ function DoneStep({ areaCount, habitCount }: { areaCount: number; habitCount: nu
   return (
     <div className="space-y-5">
       <div className="space-y-3 text-center">
-        <div className="animate-check mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-          <Check className="size-8" strokeWidth={3} />
-        </div>
+        <IconBadge
+          icon={Check}
+          size="xl"
+          shape="circle"
+          tone="solid"
+          strokeWidth={3}
+          className="animate-check mx-auto bg-emerald-500 text-white shadow-lg shadow-emerald-500/30"
+        />
         <DialogTitle className="text-2xl font-semibold tracking-tight">Tudo pronto!</DialogTitle>
         <DialogDescription className="text-sm text-muted-foreground">
           {habitCount > 0

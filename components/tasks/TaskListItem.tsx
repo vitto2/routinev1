@@ -9,6 +9,7 @@ import { queuedMessage, submitTaskCompletion } from "@/lib/offline/client";
 import { overlayTaskCompleted } from "@/lib/offline/overlay";
 import { usePendingEntry } from "@/lib/offline/store";
 import { formatDisplayDate } from "@/lib/dates";
+import { surfaceVariants } from "@/components/ui/surface";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import type { Task } from "@/types/domain";
 
@@ -80,19 +81,23 @@ export function TaskListItem({
 
   return (
     <div
+      data-ui="task-row"
       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-      className="animate-rise flex items-center gap-1.5"
+      className={cn(
+        surfaceVariants({ padding: "none", tone: completed ? "success" : "card" }),
+        "animate-rise flex min-h-16 items-center transition-colors duration-200",
+        completed && "border-transparent",
+      )}
     >
+      {/* [check 32] [título e horário] [prioridade] [editar 40] [excluir 40] */}
       <button
         type="button"
         onClick={handleToggle}
         aria-pressed={completed}
-        className={cn(
-          "flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-2xl border bg-card px-4 py-3 text-left shadow-sm transition-[transform,background-color,border-color] duration-200 active:scale-[0.98]",
-          completed ? "border-transparent bg-success/10" : "border-border hover:bg-accent/40",
-        )}
+        className="flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-l-2xl py-3 pl-4 pr-2 text-left outline-none transition-colors hover:bg-accent/40 focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 active:bg-accent/60"
       >
         <span
+          data-ui="check"
           className={cn(
             "flex size-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200",
             completed
@@ -100,12 +105,12 @@ export function TaskListItem({
               : "border-input bg-card",
           )}
         >
-          {completed ? <Check className="size-[18px]" strokeWidth={3} /> : null}
+          {completed ? <Check className="size-4" strokeWidth={3} /> : null}
         </span>
         <span className="min-w-0 flex-1">
           <span
             className={cn(
-              "block truncate font-medium transition-colors duration-200",
+              "block truncate font-medium leading-snug transition-colors duration-200",
               completed && "text-muted-foreground line-through decoration-1",
             )}
           >
@@ -124,26 +129,28 @@ export function TaskListItem({
             </span>
           ) : null}
         </span>
-        <span className={cn("size-2.5 shrink-0 rounded-full", priority.dot)} aria-hidden />
+        <span className={cn("size-2 shrink-0 rounded-full", priority.dot)} aria-hidden />
         <span className="sr-only">{priority.label}</span>
       </button>
       <button
         type="button"
+        data-ui="icon-button"
         onClick={() => setEditing(true)}
         disabled={pending}
         className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         aria-label={`Editar tarefa ${task.title}`}
       >
-        <Pencil className="size-4" />
+        <Pencil className="size-5" />
       </button>
       <button
         type="button"
+        data-ui="icon-button"
         onClick={handleDelete}
         disabled={pending}
-        className="flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+        className="mr-2 flex size-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
         aria-label={`Excluir tarefa ${task.title}`}
       >
-        <Trash2 className="size-4" />
+        <Trash2 className="size-5" />
       </button>
       {editing ? (
         <TaskDialog open={editing} onOpenChange={setEditing} today={today} task={task} />
